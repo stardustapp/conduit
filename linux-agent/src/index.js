@@ -47,9 +47,9 @@ async function dumpIfaces() {
       ifaces[parts[0]].Peers.push({
         PublicKey: parts[1],
         // PreSharedKey: parts[2],
-        Endpoint: parts[3],
+        Endpoint: parts[3] === '(none)' ? null : parts[3],
         AllowedIPs: parts[4],
-        LatestHandshake: new Date(parseInt(parts[5])*1000),
+        LatestHandshake: parts[5] === '0' ? null : new Date(parseInt(parts[5])*1000),
         // TransferRx: parseInt(parts[6]),
         // TransferTx: parseInt(parts[7]),
         // PersistentKeepalive: parts[7] === 'off' ? -1 : parseInt(parts[7]),

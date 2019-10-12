@@ -110,7 +110,7 @@ async function upsertInterface(nodeId, ifaceName, iface) {
         PublicKey: peer.PublicKey,
         InternetEndpoint: peer.Endpoint,
         // LatestHandshake: peer.LatestHandshake,
-        ListenPort: parseInt(peer.Endpoint.split(':')[1]),
+        ListenPort: peer.Endpoint ? parseInt(peer.Endpoint.split(':')[1]) : null,
         // DirectAllocationIds: allocations,
       });
       peerIfaceId = result.id;
