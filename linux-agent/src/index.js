@@ -38,6 +38,44 @@ ddpclient.on('disconnected', () => {
   process.exit(5);
 });
 
+async function dumpIfaces() {
+  const wgRaw = await execForLine(`sudo wg show all dump`);
+  const ifaces = {};
+  for (const line of wgRaw.split('\n')) {
+    const parts = line.split('\t');
+    if (parts[0] in ifaces) {
+      ifaces[parts[0]].Peers.push({
+        PublicKey: parts[1],
+        // PreSharedKey: parts[2],
+        Endpoint: parts[3],
+        AllowedIPs: parts[4],
+        LatestHandshake: new Date(parseInt(parts[5])*1000),
+        // TransferRx: parseInt(parts[6]),
+        // TransferTx: parseInt(parts[7]),
+        // PersistentKeepalive: parts[7] === 'off' ? -1 : parseInt(parts[7]),
+      });
+    } else {
+      ifaces[parts[0]] = {
+        // PrivateKey: parts[1],
+        PublicKey: parts[2],
+        ListenPort: parseInt(parts[3]),
+        // FwMark: parts[4] === 'off' ? -1 : parts[4],
+        Peers: [],
+      };
+    }
+  }
+
+  const addrRaw = await execForLine(`ip -br addr show`);
+  for (const line of addrRaw.split('\n')) {
+    const [iface, _, ...addrs] = line.split(/ +/);
+    if (iface in ifaces) {
+      ifaces[iface].Addresses = addrs;
+    }
+  }
+
+  return ifaces;
+}
+
 (async () => {
 
   console.log('connecting...');
@@ -65,6 +103,7 @@ ddpclient.on('disconnected', () => {
     PrimaryMac: primaryIface[0].mac,
     UserInfo: os.userInfo(),
     HasKernelModule: hasKernelModule,
+    Interfaces: await dumpIfaces(),
   });
   console.log({identity});
 

@@ -2,6 +2,7 @@
 
 const WebSocket = require('faye-websocket');
 const http = require('http');
+const EJSON = require('ejson');
 
 var DDPServer = function(opts) {
   const server = opts.server || http.createServer((req, res) => {
@@ -14,7 +15,7 @@ var DDPServer = function(opts) {
 
   server.on('upgrade', function(request, socket, body) {
     function sendMessage(data) {
-      ws.send(JSON.stringify(data));
+      ws.send(EJSON.stringify(data));
     }
 
     if (WebSocket.isWebSocket(request)) {
@@ -22,7 +23,7 @@ var DDPServer = function(opts) {
       var session_id = new Date().getTime();
 
       ws.on('message', function(event) {
-        var data = JSON.parse(event.data);
+        var data = EJSON.parse(event.data);
         const {msg, id} = data;
 
         switch (msg) {
