@@ -40,7 +40,7 @@ if [ "$1" = "configure" ] || [ "$1" = "abort-upgrade" ] || [ "$1" = "abort-decon
                 # Enables the unit on first installation, creates new
                 # symlinks on upgrades if the unit file has changed.
                 deb-systemd-helper enable 'conduit-agent.service' >/dev/null || true
-                systemctl daemon-reload && systemctl start 'conduit-agent.service' || true
+                systemctl daemon-reload && systemctl restart 'conduit-agent.service' || true
         else
                 # Update the statefile to add new symlinks (if any), which need to be
                 # cleaned up on purge. Also remove old symlinks.

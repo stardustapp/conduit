@@ -67,7 +67,7 @@ async function dumpIfaces() {
 
   const addrRaw = await execForLine(`ip -br addr show`);
   for (const line of addrRaw.split('\n')) {
-    const [iface, _, ...addrs] = line.split(/ +/);
+    const [iface, _, ...addrs] = line.trim().split(/ +/);
     if (iface in ifaces) {
       ifaces[iface].Addresses = addrs;
     }
@@ -116,7 +116,8 @@ async function dumpIfaces() {
 
   console.log('Sleeping...');
   while (true) {
-    await sleepMs(60 * 1000);
+    await sleepMs(30 * 1000);
+    ddpclient.ddpConnection.messageQueue.push({ msg: 'ping' });
   }
 
   console.log('disconnecting...');
