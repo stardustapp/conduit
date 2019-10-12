@@ -1,8 +1,8 @@
 {
-  "name": "api-server",
-  "version": "1.0.0",
+  "name": "@dustjs/conduit-api-server",
+  "version": "0.1.0",
   "description": "",
-  "main": "index.js",
+  "main": "src",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
