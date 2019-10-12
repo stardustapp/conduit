@@ -4,7 +4,12 @@ const WebSocket = require('faye-websocket');
 const http = require('http');
 
 var DDPServer = function(opts) {
-  const server = opts.server || http.createServer();
+  const server = opts.server || http.createServer((req, res) => {
+    console.log(req.method, req.url);
+    res.writeHead(404, {"Content-Type": "text/plain"});
+    res.write("404 Not found");
+    res.end();
+  });
   const methods = {...opts.methods};
 
   server.on('upgrade', function(request, socket, body) {
