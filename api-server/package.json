@@ -9,7 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "ddp": "^0.12.1",
-    "faye-websocket": "^0.11.3"
+    "faye-websocket": "^0.11.3",
+    "simpleddp": "^2.2.4",
+    "ws": "^7.1.2"
   }
 }

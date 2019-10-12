@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "ddp": "^0.12.1"
+    "simpleddp": "^2.2.4",
+    "ws": "^7.1.2"
   }
 }

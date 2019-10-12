@@ -2,15 +2,6 @@ const promisify = require('util').promisify;
 const sleepMs = promisify(setTimeout);
 const exec = promisify(require('child_process').exec);
 
-const DDPClient = require('ddp');
-const url = require('url');
-const datastore = url.parse('http://localhost:8080');
-const ddpclient = new DDPClient({
-  host: datastore.hostname,
-  port: datastore.port || (datastore.protocol === 'https:' ? 443 : 80),
-  ssl: datastore.protocol === 'https:',
-});
-
 async function execForLine(cmd) {
   const {stdout, stderr} = await exec(cmd);
   if (stderr.length > 0) {
@@ -32,14 +23,26 @@ for (const line of fs.readFileSync('/etc/os-release').toString('utf8').split('\n
   osRelease[line.slice(0, sIdx)] = rawVal;
 }
 
+const SimpleDDP = require('simpleddp');
+const ws = require('ws');
+const process = require('process');
+
+const ddpclient = new SimpleDDP({
+  endpoint: process.env.CONDUIT_WS_URI || "ws://localhost:8080/websocket",
+  SocketConstructor: ws,
+  reconnectInterval: 5000
+});
+
+ddpclient.on('disconnected', () => {
+  console.warn('Disconnected from DDP! Bailing...');
+  process.exit(5);
+});
+
 (async () => {
 
   console.log('connecting...');
-  const connectDDP = promisify(ddpclient.connect.bind(ddpclient));
-  await connectDDP();
+  await ddpclient.connect();
   console.log('upstream connected');
-
-  ddpclient.observe("interfaces");
 
   const defaultRoute = await execForLine(`ip route get 8.8.8.8`);
   const primaryIfaceMatch = defaultRoute.match(/ dev ([^ ]+)/);
@@ -55,40 +58,22 @@ for (const line of fs.readFileSync('/etc/os-release').toString('utf8').split('\n
   const kernelModules = await execForLine(`lsmod`);
   const hasKernelModule = kernelModules.split('\n').some(x => x.startsWith('wireguard'));
 
-  const callDDP = promisify(ddpclient.call.bind(ddpclient));
-  const identity = await callDDP('/LinuxNode/identify', [{
+  const identity = await ddpclient.call('/LinuxNode/identify', {
     SelfHostname: os.hostname(),
     OsRelease: osRelease,
     InitFlavor: hasSystemd ? 'systemd' : 'unknown',
     PrimaryMac: primaryIface[0].mac,
     UserInfo: os.userInfo(),
     HasKernelModule: hasKernelModule,
-  }]);
+  });
   console.log({identity});
 
-  var observer = ddpclient.observe('records');
-  observer.added = function(id, newValue) {
-    const doc = ddpclient.collections.records[id];
-    console.log("[ADDED] to " + observer.name + ":  " + id, doc);
-    // startBrowser(doc._id, doc.name);
-  };
-  observer.changed = function(id, oldFields, clearedFields, newFields) {
-    console.log("[CHANGED] in " + observer.name + ":  " + id, newFields);
-    //console.log("[CHANGED] old field values: ", oldFields);
-    //console.log("[CHANGED] cleared fields: ", clearedFields);
-    //console.log("[CHANGED] new fields: ", newFields);
-  };
-  observer.removed = function(id, oldValue) {
-    console.log("[REMOVED] in " + observer.name + ":  " + id);
-    //console.log("[REMOVED] previous value: ", oldValue);
-  };
-  //setTimeout(function() { observer.stop() }, 6000);
+  // subscribe to our data
+  const nodeSub = ddpclient.subscribe('/LinuxNode/config', identity.id);
+  await nodeSub.ready();
 
-  // subscribe to all data
-  const subscribeDDP = promisify(ddpclient.subscribe.bind(ddpclient));
-  await subscribeDDP('/LinuxNode/config', [identity.id]);
-
-  // console.log('received', Object.keys(ddpclient.collections.records).length, 'records');
+  const interfaces = ddpclient.collection('interfaces').fetch();
+  console.log('received', interfaces.length, 'interfaces');
 
   console.log('Sleeping...');
   while (true) {
@@ -96,8 +81,7 @@ for (const line of fs.readFileSync('/etc/os-release').toString('utf8').split('\n
   }
 
   console.log('disconnecting...');
-  const closeDDP = promisify(ddpclient.close.bind(ddpclient));
-  await closeDDP();
+  await ddpclient.disconnect();
 
 })().catch(err => {
   console.log(err.stack || err);

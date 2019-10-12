@@ -50,6 +50,7 @@ var DDPServer = function(opts) {
             break;
 
           case 'sub': // id, name, params
+            console.log('TODO: handling sub')
             sendMessage({ msg: 'added', collection: 'interfaces', id: 'CZevr7ikH6AGhvDc5', fields: {} });
             sendMessage({ msg: 'ready', subs: [id] });
             break;
