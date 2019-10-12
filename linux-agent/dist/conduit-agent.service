@@ -1,0 +1,14 @@
+[Unit]
+Description=Agent for a SDN Mesh-VPN using Wireguard as the primary transport
+After=network.target
+
+[Service]
+User=conduit
+Group=conduit
+WorkingDirectory=/opt/conduit-agent
+ExecStart=/opt/conduit-agent/src/cli.js
+Environment=CONDUIT_WS_URI=wss://conduit.wg69.net/websocket
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

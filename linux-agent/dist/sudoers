@@ -1,0 +1,1 @@
+conduit ALL=NOPASSWD: /usr/bin/wg *, /bin/systemctl start wg-quick@*, /bin/systemctl stop wg-quick@*, /bin/systemctl enable wg-quick@*, /bin/systemctl disable wg-quick@*
