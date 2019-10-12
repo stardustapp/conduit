@@ -11,10 +11,13 @@ plugins {
 
 apply plugin: 'nebula.deb'
 
+def jsonFile = file('package.json')
+def packageJson = new groovy.json.JsonSlurper().parseText(jsonFile.text)
+
 task packageDeb(type: Deb) {
   packageName = 'conduit-agent'
-  version = '0.1.1'
-  release = 5
+  version = packageJson.version
+  release = 1
 
   postInstall file('dist/deb-postinst.sh')
 
