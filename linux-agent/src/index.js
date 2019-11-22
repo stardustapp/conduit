@@ -76,6 +76,16 @@ async function dumpIfaces() {
   return ifaces;
 }
 
+async function tryFindingWgKernelModule() {
+  try {
+    const kernelModules = await execForLine(`lsmod`);
+    return kernelModules.split('\n').some(x => x.startsWith('wireguard'));
+  } catch (err) {
+    console.warn("Warn: `lsmod` failed, assuming wireguard isn't loaded");
+    return false;
+  }
+}
+
 (async () => {
 
   console.log('connecting...');
@@ -93,16 +103,13 @@ async function dumpIfaces() {
   const systemdStatus = await execForLine(`systemctl status wg-quick@.service || true`);
   const hasSystemd = systemdStatus.includes('wg-quick@.service');
 
-  const kernelModules = await execForLine(`lsmod`);
-  const hasKernelModule = kernelModules.split('\n').some(x => x.startsWith('wireguard'));
-
   const identity = await ddpclient.call('/LinuxNode/identify', {
     SelfHostname: os.hostname(),
     OsRelease: osRelease,
     InitFlavor: hasSystemd ? 'systemd' : 'unknown',
     PrimaryMac: primaryIface[0].mac,
     UserInfo: os.userInfo(),
-    HasKernelModule: hasKernelModule,
+    HasKernelModule: await tryFindingWgKernelModule(),
     Interfaces: await dumpIfaces(),
   });
   console.log({identity});
