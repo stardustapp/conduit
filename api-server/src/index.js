@@ -22,9 +22,9 @@ const server = new DDPServer({
         .fetch()[0];
 
       if (record) {
-        console.log('Identified as LinuxNode', record.id);
+        console.log('Identified', metadata.PrimaryMac, 'as LinuxNode', record.id);
       } else {
-        console.log('Creating LinuxNode for', metadata.MacAddress);
+        console.log('Creating LinuxNode for', metadata.PrimaryMac);
       }
 
       const newRecord = record
