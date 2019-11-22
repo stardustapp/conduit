@@ -24,8 +24,7 @@ task packageDeb(type: Deb) {
 
   def buildId = System.getenv('BUILD_ID')
   if (buildId != null) {
-    def gitHash = "git rev-parse --short HEAD".execute().text.trim()
-    release = 'h' + buildId + '.' + gitHash
+    release = buildId
   } else {
     release = 1
   }
@@ -68,4 +67,4 @@ task packageDeb(type: Deb) {
       '/opt/conduit-agent/dist/sudoers')
 }
 
-tasks.buildDeb.dependsOn installNpmDeps
+tasks.packageDeb.dependsOn installNpmDeps
