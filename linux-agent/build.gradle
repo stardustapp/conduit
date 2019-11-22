@@ -11,13 +11,24 @@ plugins {
 
 apply plugin: 'nebula.deb'
 
+task 'installNpmDeps'(type:Exec) {
+    commandLine 'npm', 'ci'
+}
+
 def jsonFile = file('package.json')
 def packageJson = new groovy.json.JsonSlurper().parseText(jsonFile.text)
 
 task packageDeb(type: Deb) {
   packageName = 'conduit-agent'
   version = packageJson.version
-  release = 1
+
+  def buildId = System.getenv('BUILD_ID')
+  if (buildId != null) {
+    def gitHash = "git rev-parse --short HEAD".execute().text.trim()
+    release = 'h' + buildId + '.' + gitHash
+  } else {
+    release = 1
+  }
 
   postInstall file('dist/deb-postinst.sh')
 
@@ -56,3 +67,5 @@ task packageDeb(type: Deb) {
   link('/etc/sudoers.d/conduit-agent',
       '/opt/conduit-agent/dist/sudoers')
 }
+
+tasks.buildDeb.dependsOn installNpmDeps
