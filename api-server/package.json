@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "debounce": "^1.2.0",
     "ejson": "^2.2.0",
     "faye-websocket": "^0.11.3",
     "simpleddp": "^2.2.4",
