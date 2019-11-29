@@ -19,6 +19,10 @@ exports.RecordHandle = class DustRecordHandle {
   [util.inspect.custom](depth, opts) {
     return this.toString();
   }
+
+  get _id() {
+    return this._recordId;
+  }
   get latestData() {
     const data = this._recordManager
       .fetchRecordData(this._recordId);

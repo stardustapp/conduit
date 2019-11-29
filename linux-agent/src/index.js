@@ -55,7 +55,7 @@ async function dumpNetDevices() {
   console.log('upstream connected');
 
 
-  const identity = await ddpclient.call('/LinuxNode/Register', {
+  const identity = await ddpclient.call('/Node/Register', {
     // Node
     AgentVersion: packageJson.version,
     InternalAddresses: primaryIface.map(x => x.address),
@@ -77,13 +77,13 @@ async function dumpNetDevices() {
   // submit our device list for api-server to absorb
   const syncDevices = async () => {
     const devices = await dumpNetDevices();
-    await ddpclient.call('/LinuxNode/Sync/NetDevice', devices);
+    await ddpclient.call('/Node/SyncActual', 'LinuxNetDevices', devices);
   }
   await syncDevices();
   setInterval(syncDevices/*TODO:ERRORHANDLE*/, 5 * 60 * 1000); // Every 5 Minutes
 
   // subscribe to our data
-  const nodeSub = ddpclient.subscribe('/LinuxNode/SelfDriving', identity);
+  const nodeSub = ddpclient.subscribe('/Node/SelfDriving', identity);
   await nodeSub.ready();
 
   const interfaces = ddpclient.collection('interfaces').fetch();

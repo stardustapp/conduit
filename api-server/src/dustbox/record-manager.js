@@ -71,8 +71,8 @@ exports.RecordManager = class RecordManager {
     }
     throw new Error(`Ran out of retries mutating record ${recordId}`);
   }
-  async commitNew(recordType, fieldData) {
-    const classType = this.getClassType(recordType);
+  async commitNew(typeName, fieldData) {
+    const classType = this.getClassType(typeName);
     const result = await this.dustClient.createRecord(classType.wireName, fieldData);
     // TODO('use custom impls if defined')
     // return classType.createWrapper(this, recordId);

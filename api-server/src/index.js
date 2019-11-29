@@ -75,6 +75,7 @@ const {DDPServer} = require('./ddp-server.js');
     ContainerNetwork: require('./controllers/ContainerNetwork.js').ContainerNetwork,
     PodMan: require('./controllers/PodMan.js').PodMan,
     WireGuard: require('./controllers/WireGuard.js').WireGuard,
+    LinuxNetDevices: require('./controllers/LinuxNetDevices.js').LinuxNetDevices,
   });
 
   // configure the API surface
