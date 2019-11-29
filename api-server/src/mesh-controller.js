@@ -68,7 +68,7 @@ exports.MeshController = class MeshController {
         node.applyConfig(nodeRecord);
       } else {
         console.log('introduced to new node', nodeRecord.id, nodeRecord.SelfHostname);
-        const node = new LinuxNode(this);
+        const node = new LinuxNode(this, nodeRecord.id);
         node.applyConfig(nodeRecord);
         this.knownNodes.set(nodeRecord.id, node);
       }
@@ -88,14 +88,31 @@ exports.MeshController = class MeshController {
     console.log('Calculated mesh of', Array.from(this.knownNodes.keys()).length, 'nodes');
   }
 
-  async publishLinuxNode(client, nodeId) {
-    const nodeRecord = this.dustClient
-      .findRecord('LinuxNode', record =>
-        record.id === nodeId);
-    console.log('Connected node is', nodeRecord.id);
-    client.sendMessage({ msg: 'added', collection: 'interfaces', id: 'CZevr7ikH6AGhvDc5', fields: {} });
+  async publishLinuxNode(client) {
+    const node = this.connectedNodes.get(client);
+    if (!node) throw new Error(`Please register`);
+
+
+    // const nodeRecord = this.dustClient
+    //   .findRecord('LinuxNode', record =>
+    //     record.id === nodeId);
+    // console.log('Connected node is', nodeRecord.id);
+    // client.sendMessage({ msg: 'added', collection: 'interfaces', id: 'CZevr7ikH6AGhvDc5', fields: {} });
+
+    await node.attachClient(client); // TODO: do at subscribe-time?
 
     //this.connectedNodes.
+  }
+
+  async updateLinuxNode(nodeId, fields) {
+    const record = this.dustClient
+      .findRecord('LinuxNode', record =>
+        record.id === nodeId);
+
+    if (record) {
+      console.log('Setting', fields, 'on LinuxNode', record.id);
+      return this.dustClient.updateRecord(record, fields);
+    } else throw new Error(`Node ${nodeId} not found`);
   }
 
   async registerLinuxNode(client, metadata) {
@@ -118,18 +135,20 @@ exports.MeshController = class MeshController {
 
     if (!this.knownNodes.has(nodeId)) {
       console.log('JIT-creating LinuxNode instance for new NodeId', nodeRecord.id);
-      const newObj = new LinuxNode(this);
+      const newObj = new LinuxNode(this, nodeId);
       this.knownNodes.set(nodeRecord.id, newObj);
     }
     const nodeObj = this.knownNodes.get(nodeId);
-    // nodeObj.attachClient(client); // TODO: do at subscribe-time?
     this.connectedNodes.set(client, nodeObj);
 
     return nodeId;
   }
 
   async syncNetDevices(client, deviceList) {
-    console.log('client', client, 'sent', deviceList.length, 'net devices');
+    const node = this.connectedNodes.get(client);
+    if (!node) throw new Error(`Please register`);
+
+    console.log('client', client.sessionId, 'for', node.nodeId, 'sent', deviceList.length, 'net devices');
     // TODO
   }
 

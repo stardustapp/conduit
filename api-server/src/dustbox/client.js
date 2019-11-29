@@ -44,10 +44,27 @@ exports.DustClient = class DustClient {
     return null;
   }
 
+  subscribeAppRuntime() {
+    return this.ddpclient.subscribe('/app-runtime', this.packageId);
+  }
+  get resourceCollection() {
+    return this.ddpclient.collection('resources');
+  }
+
   async commitRecord(newRev) {
-    const result = await this.ddpclient.call('/records/commit', newRev);
-    console.log('Committed', newRev.type, result.id);
-    return result.id;
+    const err = new Error(`DDP commitRecord rejected`);
+    try {
+      const result = await this.ddpclient.call('/records/commit', newRev);
+      console.log('Committed', newRev.type, result.id);
+      return result;
+
+    } catch (fail) {
+      if (!('errorType' in fail)) throw fail;
+      console.log('While committing:', newRev);
+      err.message = fail.message;
+      err.payload = fail;
+      throw err;
+    }
   }
   subscribe(name, arg={}) {
     return this.ddpclient.subscribe('/dust/publication', this.packageId, name, arg);
@@ -56,10 +73,20 @@ exports.DustClient = class DustClient {
     return this.ddpclient.collection('records');
   }
 
-  updateRecord(record, newFields={}) {
-    return this.commitRecord({ _id: record.id, ...record, ...newFields });
-  }
   createRecord(type, fields) {
     return this.commitRecord({ packageId: this.packageId, type, ...fields });
+  }
+  updateRecord(newRecord) {
+    if (!newRecord.id || !newRecord.version) throw new Error(
+      `updateRecord() only accepts full record snapshots with requested changes included`);
+    return this.commitRecord({ _id: newRecord.id, ...newRecord });
+  }
+  hardDeleteRecord({id, type, version}) {
+    if (!id || !version) throw new Error(
+      `hardDeleteRecord() needs ID and Version`);
+    return this.ddpclient.call('/records/hardDelete', {
+      _id: id, type, version,
+      packageId: this.packageId,
+    });
   }
 }
