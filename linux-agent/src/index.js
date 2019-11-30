@@ -41,11 +41,13 @@ async function dumpNetDevices() {
 }
 
 (async () => {
-
-  // console.log('net devices:', await dumpNetDevices())
+  console.log();
 
   const osRelease = await readOsRelease();
   const hasSystemd = await systemctlCmd.canConverse();
+
+  const hasWgTools = await wgCmd.test();
+  const hasWgQuickUnit = hasSystemd && await systemctlCmd.hasUnitFile('wg-quick@.service');
 
   const primaryIfaceId = await ipCmd.getDefaultDevice();
   const primaryIface = os.networkInterfaces()[primaryIfaceId];
@@ -53,7 +55,6 @@ async function dumpNetDevices() {
   console.log('connecting...');
   await ddpclient.connect();
   console.log('upstream connected');
-
 
   const identity = await ddpclient.call('/Node/Register', {
     // Node
@@ -67,17 +68,24 @@ async function dumpNetDevices() {
     UserInfo: os.userInfo(),
     HasWgKernelModule: await checkForKernelModule('wireguard'),
     SelfDrivingAvailable: [
-      (hasSystemd && await systemctlCmd.hasUnitFile('wg-quick@.service')) && 'WireGuard',
       (await dpkgQueryCmd.isPkgInstalledOk('conduit-agent')) && 'AgentUpgrade',
-      // TODO: Podman
+      false && 'ContainerNetwork',
+      (await ipCmd.test()) && 'NetDevice',
+      false && 'PodMan',
+      (hasWgTools && hasWgQuickUnit) && 'WireGuard',
     ].filter(x => x),
   });
   console.log('Registered with mesh controller.', {identity});
 
   // submit our device list for api-server to absorb
   const syncDevices = async () => {
-    const devices = await dumpNetDevices();
-    await ddpclient.call('/Node/SyncActual', 'LinuxNetDevices', devices);
+
+    const netDevices = await dumpNetDevices();
+    await ddpclient.call('/Node/SyncActual', 'NetDevice', netDevices);
+
+    const wgActual = await wgCmd.dumpAll();
+    await ddpclient.call('/Node/SyncActual', 'WireGuard', wgActual);
+
   }
   await syncDevices();
   setInterval(syncDevices/*TODO:ERRORHANDLE*/, 5 * 60 * 1000); // Every 5 Minutes

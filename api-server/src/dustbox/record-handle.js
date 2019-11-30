@@ -1,4 +1,5 @@
 const util = require('util');
+const EJSON = require('ejson');
 
 // Does not store actual data. Just knows the identity of a record.
 exports.RecordHandle = class DustRecordHandle {
@@ -48,6 +49,17 @@ exports.RecordHandle = class DustRecordHandle {
   }
 
   commitFields(newFields) {
+    const snapshot = this.latestData;
+    const changedFields = new Array;
+    for (const key in newFields) {
+      if (EJSON.stringify(snapshot[key]) !== EJSON.stringify(newFields[key])) {
+        console.log(key, snapshot[key], newFields[key])
+        changedFields.push(key);
+      }
+    }
+    if (changedFields.length === 0) return;
+    console.log('Updating fields', changedFields, 'on', this._id);
+
     return this._recordManager
       .commitMutation(this._recordId, record => {
         return {...record, ...newFields};

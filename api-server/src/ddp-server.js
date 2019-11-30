@@ -3,6 +3,7 @@
 const WebSocket = require('faye-websocket');
 const http = require('http');
 const EJSON = require('ejson');
+const util = require('util')
 
 class DDPServerClient {
   constructor(ddpServer, ws) {
@@ -26,6 +27,11 @@ class DDPServerClient {
       case "connect":
         this.sendMessage({ server_id: 0 });
         this.sendMessage({ msg: "connected", session_id: this.sessionId });
+        break;
+
+      case "ping":
+        this.sendMessage({ msg: "pong" });
+        console.log('  (client ping)');
         break;
 
       case "method":
@@ -91,6 +97,13 @@ class DDPServerClient {
     this.ws = null;
     this.sessionId = null;
   }
+
+  toString() {
+    return `<DDPServerClient sessionId="${this.sessionId}" />`;
+  }
+  [util.inspect.custom](depth, opts) {
+    return this.toString();
+  }
 }
 
 var DDPServer = function(opts={}) {
@@ -114,10 +127,16 @@ var DDPServer = function(opts={}) {
 
   this.listen = function(port) {
     // assumed that .listen() should be called outside, if server is passed in options
-    if (opts.server) {
-      return;
-    }
+    if (opts.server) return;
+
     server.listen(port);
+    return new Promise((resolve, reject) => {
+      server.once('listening', () => {
+        server.off('error', reject);
+        resolve(server.address());
+      });
+      server.once('error', reject);
+    })
   };
 };
 

@@ -1,5 +1,15 @@
 const {execForLine} = require('./_lib.js');
 
+exports.test = async function() {
+  try {
+    await execForLine(`ip -json -brief link`);
+    return true;
+  } catch (err) {
+    console.log(`can't use 'ip -json':`, err);
+    return false;
+  }
+}
+
 function mapLinkInfo(kind, info) {
   switch (kind) {
     case 'veth':
@@ -19,6 +29,13 @@ function mapLinkInfo(kind, info) {
         local: info.local,
         port: info.port,
         link: info.link,
+      };
+    case 'tun':
+      return {kind,
+        multi_queue: info.multi_queue,
+        persist: info.persist,
+        pi: info.pi,
+        vnet_hdr: info.vnet_hdr,
       };
     default:
       console.warn('WARN: Unrecognized net device info kind', kind);

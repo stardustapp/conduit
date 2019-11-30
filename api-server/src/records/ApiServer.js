@@ -1,7 +1,7 @@
 exports.ApiServer = class ApiServer {
   constructor(selfHandle) {
     this.self = selfHandle;
-    this.connectedNodes = new Map; // DDPServerClient -> LinuxNode
+    this.connectedNodes = new Map; // DDPServerClient -> RecordHandle
   }
 
   exposeApiSurface({
@@ -27,6 +27,7 @@ exports.ApiServer = class ApiServer {
       if (LastSeen >= cutOffDate) continue;
 
       console.log('Culling zombie', apiServer);
+      TODO(`Unlink zombied nodes before hardDelete()ing the zombie ApiServer itself`);
       await apiServer.hardDelete(version);
     }
   }
@@ -55,10 +56,12 @@ exports.ApiServer = class ApiServer {
     // }
 
     // this.knownNodes.set(nodeHandle._id, nodeHandle.instance);
-    this.connectedNodes.set(client, nodeHandle.instance);
+    this.connectedNodes.set(client, nodeHandle);
   }
 
   async syncActualState(recordManager, controllerManager, client, stateKey, actualState) {
-    console.warn('TODO: received actual state', stateKey, actualState);
+    const nodeHandle = this.connectedNodes.get(client);
+    TODO(`received actual state for ${stateKey} from ${nodeHandle}`);
+    await controllerManager.syncActualState(nodeHandle, stateKey, actualState);
   }
 }

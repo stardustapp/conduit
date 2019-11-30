@@ -28,16 +28,17 @@ exports.ClassCompiler = class ClassCompiler {
     if (this.allTypes.has(fullName)) throw new Error(
       `registerClassType() tried re-registering ${fullName}`);
 
-    console.log('registering type', fullName);
+    // console.log('registering type', fullName);
     this.allTypes.set(fullName, new ClassType(fullName, wireName, baseType, fields));
 
     // check if anything is waiting for us
     if (this.baseChilds.has(fullName)) {
-      console.log('recording base', fullName, 'as ready');
+      // console.log('recording base', fullName, 'as ready');
       this.readyBases.push(fullName);
     }
   }
-  registerCustomRecord({base, name, fields}) {
+  registerCustomRecord(customRecordRecord) {
+    const {base, name, fields} = customRecordRecord;
     const fullBaseName = readTypeName(base);
     const fullName = readTypeName(name);
 
@@ -46,20 +47,23 @@ exports.ClassCompiler = class ClassCompiler {
       this.registerClassType(fullName, name, this.allTypes.get(fullBaseName), fields);
     } else {
       // queue for when base is ready
-      if (!baseChilds.has(fullBaseName)) {
-        baseChilds.set(fullBaseName, new Set);
+      if (!this.baseChilds.has(fullBaseName)) {
+        this.baseChilds.set(fullBaseName, new Set);
       }
       console.log('Queueing', fullName, 'to build after', fullBaseName);
-      baseChilds.get(fullBaseName).add(childRec);
+      this.baseChilds.get(fullBaseName).add(customRecordRecord);
     }
   }
 
   finish() {
     while (this.readyBases.length > 0) {
       const baseName = this.readyBases.shift();
+      const base = this.allTypes.get(baseName);
+
+      // console.log('Finishing base', baseName, '...');
       for (const child of this.baseChilds.get(baseName)) {
         const childName = readTypeName(child.name);
-        this.registerClassType(childName, this.allTypes.get(fullBaseName), fields);
+        this.registerClassType(childName, child.name, base, child.fields);
       }
       this.baseChilds.delete(baseName);
     }
@@ -68,7 +72,7 @@ exports.ClassCompiler = class ClassCompiler {
     if (pendingBases.length > 0) throw new Error(
       `ClassCompiler can't finish(), still need bases ${pendingBases.join(', ')}`);
 
-    console.log('Finished registering types', Array.from(this.allTypes.keys()));
+    console.log('Finished registering', Array.from(this.allTypes.keys()).length, 'types!');
     return this.allTypes;
   }
 }

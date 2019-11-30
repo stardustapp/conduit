@@ -1,3 +1,11 @@
+// TODO: support custom impls?
+const EJSON = require('ejson');
+EJSON.addType('Astronomy', json => {
+  // json.class, json.values
+  const {packageId, scope, ...data} = EJSON.parse(json.values);
+  return data;
+});
+
 const {RecordHandle} = require('./record-handle.js');
 const {ClassCompiler} = require('./class-compiler.js');
 
@@ -42,7 +50,7 @@ exports.RecordManager = class RecordManager {
 
   findRecords(typeName, selector=()=>true) {
     const classType = this.getClassType(typeName);
-    // console.log(classType);
+    // console.log(classType, selector);
     return this
       .dustClient.recordCollection
       .filter(record => classType

@@ -17,7 +17,7 @@ const {DDPServer} = require('./ddp-server.js');
   // establish websocket
   console.log('connecting to dustbox...');
   const dustClient = new DustClient(
-    process.env.DUST_WS_URI || 'ws://dustbox.wg69.net');
+    process.env.DUST_WS_URI || 'ws://dustbox.wg69.net', 'conduit');
   await dustClient.connect();
   console.log('upstream connected');
 
@@ -52,19 +52,16 @@ const {DDPServer} = require('./ddp-server.js');
     HostName: require('os').hostname(),
   });
 
-  // TODO: set up timer to cull old ApiServers, offline their nodes, and update our LastSeen
-  // TODO: call timer like 5s after startup
-
-  async function manageApiLifecyles() {
-    try {
-      await apiServer.instance.cullZombies(recordManager);
-      await apiServer.instance.markSeen();
-    } finally {
-      setTimeout(manageApiLifecyles, 60 * 1000)
-    }
-  }
   await apiServer.instance.cullZombies(recordManager);
-  setTimeout(manageApiLifecyles, 30 * 1000);
+  setInterval(async function manageApiLifecyles() {
+    try {
+      await apiServer.instance.markSeen();
+      await apiServer.instance.cullZombies(recordManager);
+    } catch (err) {
+      console.log('manageApiLifecyles background crash:');
+      console.log(err.stack);
+    }
+  }, 60 * 1000);
 
   // load in the mesh state
   // const meshController = new MeshController(recordManager);
@@ -75,13 +72,15 @@ const {DDPServer} = require('./ddp-server.js');
     ContainerNetwork: require('./controllers/ContainerNetwork.js').ContainerNetwork,
     PodMan: require('./controllers/PodMan.js').PodMan,
     WireGuard: require('./controllers/WireGuard.js').WireGuard,
-    LinuxNetDevices: require('./controllers/LinuxNetDevices.js').LinuxNetDevices,
+    NetDevice: require('./controllers/NetDevice.js').NetDevice,
   });
 
   // configure the API surface
   const ddpServer = new DDPServer();
   apiServer.instance.exposeApiSurface({ ddpServer, recordManager, controllerManager });
-  ddpServer.listen(8080);
+  const address = await ddpServer.listen(8080);
+  console.log('Listening @', address);
+  console.log();
 
   while (true) {
     await sleepMs(5000);
