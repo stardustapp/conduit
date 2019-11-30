@@ -11,10 +11,10 @@ case "$1" in
                         --quiet --group conduit
         fi
 
+        # allow directly managing wireguard configs
         if ! dpkg-statoverride --list "/etc/wireguard" >/dev/null 2>&1; then
                 dpkg-statoverride --update --add root conduit 0775 "/etc/wireguard"
         fi
-
         if [ -d /etc/wireguard ]; then
                 chown -R :conduit /etc/wireguard
                 chmod -R g+rw /etc/wireguard

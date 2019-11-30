@@ -56,5 +56,5 @@ exports.dumpAll = async function() {
     }
   }
 
-  return {identities: identityList};
+  return identityList;
 };

@@ -29,12 +29,14 @@ task packageDeb(type: Deb) {
     release = 1
   }
 
+  preInstall file('dist/deb-preinst.sh')
   postInstall file('dist/deb-postinst.sh')
 
   requires('nodejs')
   requires('adduser')
 
   recommends('wireguard')
+  recommends('podman')
   recommends('systemd')
 
   into '/opt/conduit-agent'
@@ -47,10 +49,8 @@ task packageDeb(type: Deb) {
   from('node_modules') {
     into 'node_modules'
   }
-  from('package.json') {
-  }
-  from('package-lock.json') {
-  }
+  from('package.json') {}
+  from('package-lock.json') {}
 
   from('dist/conduit-agent.service') {
     into 'dist'

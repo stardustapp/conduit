@@ -1,12 +1,20 @@
 #!/bin/sh -eux
 # TODO: check that package is not held, if apt doesn't
 
-UriPrefix="s3-us-west-2.amazonaws.com/dist.stardustapp.run/deb"
+UrlPrefix="https://s3-us-west-2.amazonaws.com/dist.stardustapp.run/deb"
 VersionCode="$1"
+GivenUrl="$2"
 
-cd "$(mktmp -d)"
+if [ "${GivenUrl%%$UrlPrefix*}" ]
+then
+  echo "Given URL '${GivenUrl}' not in trusted prefix '${UrlPrefix}'"
+  exit 5
+fi
 
-wget -O "package.deb" "https://$UriPrefix/conduit-agent_${VersionCode}_all.deb" \
+cd "$(mktemp -d)"
+
+PackageFilename="conduit-agent_${VersionCode}_all.deb"
+wget -O "${PackageFilename}" "${GivenUrl}" \
   2> wget-output.log
 
 if ! grep " \[application/x-debian-package\]$" wget-output.log
@@ -16,4 +24,4 @@ then
   exit 6
 fi
 
-dpkg -i package.deb
+dpkg -i "${PackageFilename}"

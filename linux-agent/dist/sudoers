@@ -1,1 +1,13 @@
-conduit ALL=NOPASSWD: /usr/bin/wg *, /bin/systemctl start wg-quick@*, /bin/systemctl stop wg-quick@*, /bin/systemctl enable wg-quick@*, /bin/systemctl disable wg-quick@*
+# manage wireguard devices and tunnels
+conduit ALL=NOPASSWD: /usr/bin/wg *
+conduit ALL=NOPASSWD: /bin/systemctl start wg-quick@*, /bin/systemctl stop wg-quick@*
+conduit ALL=NOPASSWD: /bin/systemctl enable wg-quick@*, /bin/systemctl disable wg-quick@*
+
+# manage containers and pods with podman
+conduit ALL=NOPASSWD: /usr/local/bin/podman *
+conduit ALL=NOPASSWD: /bin/systemctl start pod-*, /bin/systemctl stop pod-*
+conduit ALL=NOPASSWD: /bin/systemctl start container-*, /bin/systemctl stop container-*
+conduit ALL=NOPASSWD: /bin/systemctl enable /opt/conduit-agent/unit-files/*, /bin/systemctl disable /opt/conduit-agent/unit-files/*
+
+# run complex scripts like agent upgrades
+conduit ALL=NOPASSWD: /opt/conduit-agent/actions/* *

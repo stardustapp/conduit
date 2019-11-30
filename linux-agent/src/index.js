@@ -83,7 +83,7 @@ async function dumpNetDevices() {
     const netDevices = await dumpNetDevices();
     await ddpclient.call('/Node/SyncActual', 'NetDevice', netDevices);
 
-    const wgActual = await wgCmd.dumpAll();
+    const wgActual = {identities: await wgCmd.dumpAll()};
     await ddpclient.call('/Node/SyncActual', 'WireGuard', wgActual);
 
   }
@@ -94,8 +94,8 @@ async function dumpNetDevices() {
   const nodeSub = ddpclient.subscribe('/Node/SelfDriving', identity);
   await nodeSub.ready();
 
-  const interfaces = ddpclient.collection('interfaces').fetch();
-  console.log('received', interfaces.length, 'interfaces');
+  const agentVersions = ddpclient.collection('AgentVersion').fetch();
+  console.log('received', agentVersions.length, 'AgentVersions');
 
   console.log('Sleeping...');
   while (true) {
