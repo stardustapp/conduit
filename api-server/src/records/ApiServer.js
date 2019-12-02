@@ -47,7 +47,7 @@ exports.ApiServer = class ApiServer {
       console.log('Identified', registration.PrimaryMac, 'as', nodeHandle);
       await nodeHandle.commitFields(registration);
     } else {
-      nodeHandle = await this.recordManager.commitNew('LinuxNode', registration);
+      nodeHandle = await recordManager.commitNew('LinuxNode', registration);
       console.log('Created LinuxNode', nodeHandle._id, 'for', registration.PrimaryMac);
     }
 
