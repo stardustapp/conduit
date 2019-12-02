@@ -48,16 +48,20 @@ exports.RecordManager = class RecordManager {
     return list[0];
   }
 
-  findRecords(typeName, selector=()=>true) {
+  findRecordsRaw(typeName, selector=()=>true) {
     const classType = this.getClassType(typeName);
     // console.log(classType, selector);
     return this
       .dustClient.recordCollection
       .filter(record => classType
         .allTypeNames.has(record.type)
-        && selector(record))
-      .fetch()
-      .map(({type, id}) =>
+        && selector(record));
+  }
+
+  findRecords(typeName, selector=()=>true) {
+    return this
+      .findRecordsRaw(typeName, selector)
+      .fetch().map(({type, id}) =>
         new RecordHandle(this, this.getClassType(type), id));
   }
 

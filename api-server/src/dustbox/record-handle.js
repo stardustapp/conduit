@@ -47,6 +47,16 @@ exports.RecordHandle = class DustRecordHandle {
 
     throw new Error(`Record type ${wireName} has no instance implementation`);
   }
+  
+  reactiveCursor() {
+    return this._recordManager
+      .dustClient.recordCollection
+      .filter(record => record.id === this._recordId
+          && record.type === this._classType.wireName)
+      .reactive({
+        limit: 1,
+      }).one();
+  }
 
   commitFields(newFields) {
     const snapshot = this.latestData;

@@ -15,7 +15,7 @@ exports.ApiServer = class ApiServer {
       this.syncActualState.bind(this, recordManager, controllerManager);
 
     ddpServer.publications["/Node/SelfDriving"] =
-      controllerManager.publishSelfDriving.bind(controllerManager);
+      this.publishSelfDriving.bind(this, controllerManager);
   }
 
   async cullZombies(recordManager) {
@@ -63,5 +63,9 @@ exports.ApiServer = class ApiServer {
     const nodeHandle = this.connectedNodes.get(client);
     TODO(`received actual state for ${stateKey} from ${nodeHandle}`);
     await controllerManager.syncActualState(nodeHandle, stateKey, actualState);
+  }
+  async publishSelfDriving(controllerManager, client) {
+    const nodeHandle = this.connectedNodes.get(client);
+    await controllerManager.publishSelfDriving(nodeHandle, client);
   }
 }
