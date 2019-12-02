@@ -17,13 +17,4 @@ exports.LinuxNode = class LinuxNode {
   // link() {
   //   console.log('TODO: LinuxNode#link()');
   // }
-
-  async attachClient(client) {
-    await this.meshController.updateLinuxNode(this.nodeId, {
-      OnlineToken: client.sessionId.toString(),
-      OnlineSince: new Date(),
-    });
-    this.liveClient = client;
-    // TODO: start issuing self-driving?
-  }
 }

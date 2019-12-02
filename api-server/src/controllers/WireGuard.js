@@ -108,3 +108,38 @@ exports.WireGuard = class WireGuardController {
     console.log('Completed WireGuard actual sync');
   }
 }
+
+//     console.log('visiting peer', peer);
+//     const peerMatch = this.dustClient
+//       .findRecord('Interface', record =>
+//         record.PublicKey === peer.PublicKey);
+//
+//     let peerIfaceId;
+//     if (peerMatch) {
+//       // TODO: update InternetEndpoint using Endpoint?
+//       peerIfaceId = peerMatch.id;
+//     } else {
+//       console.log('Creating Interface for foreign peer', peer.PublicKey);
+//       peerIfaceId = await this.dustClient.createRecord('Interface', {
+//         PublicKey: peer.PublicKey,
+//         InternetEndpoint: peer.Endpoint,
+//         // LatestHandshake: peer.LatestHandshake,
+//         ListenPort: peer.Endpoint ? parseInt(peer.Endpoint.split(':')[1]) : null,
+//         // DirectAllocationIds: allocations,
+//       });
+//     }
+//
+//     const tunnelMatch = this.dustClient
+//       .findRecord('Tunnel', record =>
+//         record.InterfaceIds.includes(interfaceId)
+//         && record.InterfaceIds.includes(peerIfaceId));
+//     if (tunnelMatch) {
+//       // TODO: update LatestHandshake
+//     } else {
+//       console.log('Creating Tunnel to peer', peer.PublicKey);
+//       await this.dustClient.createRecord('Tunnel', {
+//         InterfaceIds: [ interfaceId, peerIfaceId ],
+//         LatestHandshake: peer.LatestHandshake,
+//       });
+//     }
+//   }

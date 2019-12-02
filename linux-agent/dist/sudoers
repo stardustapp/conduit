@@ -10,4 +10,4 @@ conduit ALL=NOPASSWD: /bin/systemctl start container-*, /bin/systemctl stop cont
 conduit ALL=NOPASSWD: /bin/systemctl enable /opt/conduit-agent/unit-files/*, /bin/systemctl disable /opt/conduit-agent/unit-files/*
 
 # run complex scripts like agent upgrades
-conduit ALL=NOPASSWD: /opt/conduit-agent/actions/* *
+conduit ALL=NOPASSWD: /opt/conduit-agent/src/actions/* *

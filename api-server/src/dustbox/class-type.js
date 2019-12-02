@@ -25,6 +25,6 @@ exports.ClassType = class DustClassType {
   }
 
   installFields(record) {
-    TODO('install getters and setters for '+this.name);
+    // TODO('install getters and setters for '+this.name);
   }
 }

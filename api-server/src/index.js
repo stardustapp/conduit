@@ -78,14 +78,16 @@ const {DDPServer} = require('./ddp-server.js');
   // configure the API surface
   const ddpServer = new DDPServer();
   apiServer.instance.exposeApiSurface({ ddpServer, recordManager, controllerManager });
+
+  // let's friggin goooo!!
   const address = await ddpServer.listen(8080);
   console.log('Listening @', address);
   console.log();
-
   while (true) {
-    await sleepMs(5000);
+    await sleepMs(15000);
   }
 
+  // TODO: proceed to a clean shutdown on signal..
   console.log('disconnecting...');
   await dustClient.disconnect();
 

@@ -22,7 +22,7 @@ exports.NetDevice = class NetDeviceController {
 
     for (const iface of actualState) {
       const {DeviceName, LinkType, Addresses} = iface;
-      console.log('Node', nodeHandle, 'offered', LinkType, 'interface', DeviceName);
+      // console.log('Node', nodeHandle, 'offered', LinkType, 'interface', DeviceName);
 
       if (existingDevs.has(DeviceName)) {
         const existingDev = existingDevs.get(DeviceName);

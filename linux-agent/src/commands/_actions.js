@@ -12,11 +12,11 @@ function readWholeStream(readStream) {
   });
 }
 
-async function runAction(scriptName, argv=[], env={}) {
+exports.runAction = async function runAction(actionName, argv=[], env={}) {
   // TODO: use a fixed exec path
   console.log('--- action invoked:', actionName, argv, env);
   const allArgs = [
-    `${process.cwd()}/src/actions/${scriptName}.sh`,
+    `${process.cwd()}/src/actions/${actionName}.sh`,
     ...argv];
 
   const subprocess = execa(`sudo`, allArgs, {
@@ -30,9 +30,9 @@ async function runAction(scriptName, argv=[], env={}) {
   	});
   }, 60*60 * 1000);
 
-  const allOut = await readWholeStream(process.all);
+  const allOut = await readWholeStream(subprocess.all);
   console.log('--- action output:');
-  console.log(allOut);
+  console.log(allOut.toString('utf-8'));
 
   await subprocess; // probs throws
   console.log('--- action completed :)');

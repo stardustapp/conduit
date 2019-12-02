@@ -2,19 +2,21 @@ const debounce = require('debounce');
 
 class AgentVariant {
   constructor(versionCursor) {
-    this.currentVersion = versionCursor.data();
     this.subscribers = new Set;
+    this.processSnapshot(versionCursor.data());
+    versionCursor.onChange(this.processSnapshot.bind(this));
+  }
 
-    versionCursor.onChange(newData => {
-      this.currentVersion = newData;
-      for (const subscriber of this.subscribers) {
-        subscriber.informFields({ latestVersion: newData });
-      }
-    });
+  processSnapshot(newData) {
+    const {AgentName, VersionString, GitCommit, ReleasedAt, SrcUrl, DebUrl, RpmUrl} = newData;
+    this.currentVersion = {AgentName, VersionString, GitCommit, ReleasedAt, SrcUrl, DebUrl, RpmUrl};
+
+    for (const subscriber of this.subscribers) {
+      subscriber.informFields({ latestVersion: this.currentVersion });
+    }
   }
 
   addSubscriber(subscriber) {
-    console.log('sending AgentUpgrade SelfDriving');
     subscriber.informFields({
       latestVersion: this.currentVersion,
     });

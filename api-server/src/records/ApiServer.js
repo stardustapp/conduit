@@ -51,21 +51,23 @@ exports.ApiServer = class ApiServer {
       console.log('Created LinuxNode', nodeHandle._id, 'for', registration.PrimaryMac);
     }
 
-    // for (const iface of registration.Interfaces) {
-    //   await this.upsertInterface(nodeHandle, iface);
-    // }
-
     // this.knownNodes.set(nodeHandle._id, nodeHandle.instance);
     this.connectedNodes.set(client, nodeHandle);
   }
 
   async syncActualState(recordManager, controllerManager, client, stateKey, actualState) {
     const nodeHandle = this.connectedNodes.get(client);
-    TODO(`received actual state for ${stateKey} from ${nodeHandle}`);
     await controllerManager.syncActualState(nodeHandle, stateKey, actualState);
   }
+
   async publishSelfDriving(controllerManager, client) {
     const nodeHandle = this.connectedNodes.get(client);
     await controllerManager.publishSelfDriving(nodeHandle, client);
+
+    await nodeHandle.commitFields({
+      ApiServerId: this.self._id,
+      OnlineToken: client.sessionId.toString(),
+      OnlineSince: new Date(),
+    });
   }
 }

@@ -9,7 +9,9 @@ class DDPServerClient {
   constructor(ddpServer, ws) {
     this.server = ddpServer;
     this.ws = ws;
+
     this.sessionId = new Date().getTime();
+    this.closers = new Array;
 
     ws.on('message', this.onMessage.bind(this));
     ws.on('close', this.onClose.bind(this));
@@ -96,6 +98,17 @@ class DDPServerClient {
     console.log('close', event.code, event.reason);
     this.ws = null;
     this.sessionId = null;
+
+    for (const closer of this.closers) {
+      try {
+        closer();
+      } catch (err) {
+        console.warn('WARN: DDPServerClient closer failed:', err.stack);
+      }
+    }
+  }
+  addCloser(closer) {
+    this.closers.push(closer);
   }
 
   toString() {

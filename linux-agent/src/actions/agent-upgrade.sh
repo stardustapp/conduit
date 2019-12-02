@@ -1,7 +1,7 @@
 #!/bin/sh -eux
 # TODO: check that package is not held, if apt doesn't
 
-UrlPrefix="https://s3-us-west-2.amazonaws.com/dist.stardustapp.run/deb"
+UrlPrefix="https://s3-us-west-2.amazonaws.com/dist.stardustapp.run/deb/"
 VersionCode="$1"
 GivenUrl="$2"
 

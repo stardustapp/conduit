@@ -6,6 +6,12 @@ const os = require('os');
 const ws = require('ws');
 const SimpleDDP = require('simpleddp');
 
+global.TODO = function (msg) {
+  console.warn('--> TODO:', msg);
+}
+
+const {PuppetManager} = require('./puppets.js');
+
 const {checkForKernelModule} = require('./commands/lsmod.js');
 const wgCmd = require('./commands/wg.js');
 const ipCmd = require('./commands/ip.js');
@@ -67,7 +73,7 @@ async function dumpNetDevices() {
     PrimaryMac: primaryIface[0].mac,
     UserInfo: os.userInfo(),
     HasWgKernelModule: await checkForKernelModule('wireguard'),
-    SelfDrivingAvailable: [
+    SelfDrivingAvailable: [ // TODO: all these hard-codeds
       (await dpkgQueryCmd.isPkgInstalledOk('conduit-agent')) && 'AgentUpgrade',
       false && 'ContainerNetwork',
       (await ipCmd.test()) && 'NetDevice',
@@ -77,25 +83,36 @@ async function dumpNetDevices() {
   });
   console.log('Registered with mesh controller.', {identity});
 
-  // submit our device list for api-server to absorb
-  const syncDevices = async () => {
-
-    const netDevices = await dumpNetDevices();
-    await ddpclient.call('/Node/SyncActual', 'NetDevice', netDevices);
-
-    const wgActual = {identities: await wgCmd.dumpAll()};
-    await ddpclient.call('/Node/SyncActual', 'WireGuard', wgActual);
-
-  }
-  await syncDevices();
-  setInterval(syncDevices/*TODO:ERRORHANDLE*/, 5 * 60 * 1000); // Every 5 Minutes
+  // hook self-driving controller clients
+  const puppetManager = new PuppetManager(ddpclient);
 
   // subscribe to our data
   const nodeSub = ddpclient.subscribe('/Node/SelfDriving', identity);
   await nodeSub.ready();
 
-  const agentVersions = ddpclient.collection('AgentVersion').fetch();
-  console.log('received', agentVersions.length, 'AgentVersions');
+  // submit our observed states for api-server to absorb
+  const syncDevices = async () => {
+    const controllers = {};
+    for (const controllerDoc of ddpclient.collection('Controllers').fetch()) {
+      controllers[controllerDoc.id] = controllerDoc;
+    }
+
+    if (controllers.NetDevice.Mode !== 'Paused') {
+      const netDevices = await dumpNetDevices();
+      await ddpclient.call('/Node/SyncActual', 'NetDevice', netDevices);
+    }
+
+    if (controllers.WireGuard.Mode !== 'Paused') {
+      const wgActual = {identities: await wgCmd.dumpAll()};
+      await ddpclient.call('/Node/SyncActual', 'WireGuard', wgActual);
+    }
+
+  }
+  await syncDevices();
+  setInterval(syncDevices/*TODO:ERRORHANDLE*/, 5 * 60 * 1000); // Every 5 Minutes
+
+  const controllers = ddpclient.collection('Controllers').fetch();
+  console.log('received', controllers.length, 'Controllers');
 
   console.log('Sleeping...');
   while (true) {
