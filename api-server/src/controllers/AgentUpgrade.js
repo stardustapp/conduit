@@ -11,6 +11,7 @@ class AgentVariant {
     const {AgentName, VersionString, GitCommit, ReleasedAt, SrcUrl, DebUrl, RpmUrl} = newData;
     this.currentVersion = {AgentName, VersionString, GitCommit, ReleasedAt, SrcUrl, DebUrl, RpmUrl};
 
+    console.log('AgentUpgrade: Newest version is', VersionString, 'from', ReleasedAt)
     for (const subscriber of this.subscribers) {
       subscriber.informFields({ latestVersion: this.currentVersion });
     }
@@ -64,10 +65,9 @@ exports.AgentUpgrade = class AgentUpgradeController {
     const versionCursor = this.recordManager
       .findRecordsRaw('AgentVersion', record =>
         record.AgentName === variantName && !!record.ReleasedAt)
-      .reactive({
-        sort: {ReleasedAt: -1},
-        limit: 1,
-      }).one();
+      .reactive()
+      .sort((a, b) => b.ReleasedAt - a.ReleasedAt)
+      .one();
 
     const variant = new AgentVariant(versionCursor);
     this.variants.set(variantName, variant);
