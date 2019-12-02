@@ -1,6 +1,6 @@
 {
   "name": "@dustjs/conduit-linux-agent",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "",
   "main": "src",
   "bin": {
@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "execa": "^3.3.0",
+    "semver": "^6.3.0",
     "simpleddp": "^2.2.4",
     "ws": "^7.1.2"
   }

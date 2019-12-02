@@ -40,6 +40,7 @@ class PuppetBase {
 }
 
 const myVersion = require('../package.json').version;
+const semver = require('semver');
 class AgentUpgradePuppet extends PuppetBase {
   onSelfDriving({latestVersion}) {
     this.cancelAnyTimer('Cancelling pending upgrade due to new config');
@@ -47,6 +48,8 @@ class AgentUpgradePuppet extends PuppetBase {
 
     if (VersionString === myVersion) return this.log(
       `Ignoring version ${VersionString}, same as current version ${myVersion}`);
+    if (semver.gt(myVersion, VersionString)) return this.log(
+      `Ignoring version ${VersionString}, looks older than current version ${myVersion}`);
     if (!DebUrl) return this.log(
       `Ignoring version ${VersionString}, lacks a DebUrl value`);
 
