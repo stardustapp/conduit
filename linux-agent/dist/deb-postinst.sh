@@ -19,6 +19,12 @@ case "$1" in
                 chown -R :conduit /etc/wireguard
                 chmod -R g+rw /etc/wireguard
         fi
+
+        if [ ! -d /opt/conduit-agent/unit-files ]; then
+                mkdir /opt/conduit-agent/unit-files
+                chown -R :conduit /opt/conduit-agent/unit-files
+                chmod -R g+rw /opt/conduit-agent/unit-files
+        fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

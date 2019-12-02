@@ -29,7 +29,6 @@ task packageDeb(type: Deb) {
     release = 1
   }
 
-  preInstall file('dist/deb-preinst.sh')
   postInstall file('dist/deb-postinst.sh')
 
   requires('nodejs')
