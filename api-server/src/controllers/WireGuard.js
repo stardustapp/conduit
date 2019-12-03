@@ -147,7 +147,14 @@ exports.WireGuard = class WireGuardController {
       let peering = knownPeerings.find(p =>
         p.latestData.WgTunnelId === tunnel._id);
       if (peering) {
-        await peering.commitFields(peeringFields);
+        const {TransferRx, TransferTx} = peering.latestData;
+        await peering.commitFields({
+          TransferRxDelta: (TransferRx >= 0 && TransferRx <= peer.TransferRx)
+            ? (peer.TransferRx - TransferRx) : null,
+          TransferTxDelta: (TransferTx >= 0 && TransferTx <= peer.TransferTx)
+            ? (peer.TransferTx - TransferTx) : null,
+          ...peeringFields,
+        });
       } else {
         peering = await this.recordManager.commitNew('WgPeering', {
           LocalIdentityId: identityHandle._id,
