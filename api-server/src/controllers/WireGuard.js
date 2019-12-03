@@ -85,11 +85,8 @@ exports.WireGuard = class WireGuardController {
       }
       extraIdents.delete(identity);
 
-      TODO('WG cache known peers');
-      for (const peer of Peers) {
-        TODO(`WG peer upsert ${JSON.stringify(peer)}`);
-        //const peerIdentity = await this.ensureRemoteWgIdentity('')
-      }
+      // Sync peers
+      await this.syncIfacePeers(nodeHandle, identity, Peers);
     }
 
     for (const goneIdent of extraIdents) {
@@ -107,39 +104,60 @@ exports.WireGuard = class WireGuardController {
 
     console.log('Completed WireGuard actual sync');
   }
-}
 
-//     console.log('visiting peer', peer);
-//     const peerMatch = this.dustClient
-//       .findRecord('Interface', record =>
-//         record.PublicKey === peer.PublicKey);
-//
-//     let peerIfaceId;
-//     if (peerMatch) {
-//       // TODO: update InternetEndpoint using Endpoint?
-//       peerIfaceId = peerMatch.id;
-//     } else {
-//       console.log('Creating Interface for foreign peer', peer.PublicKey);
-//       peerIfaceId = await this.dustClient.createRecord('Interface', {
-//         PublicKey: peer.PublicKey,
-//         InternetEndpoint: peer.Endpoint,
-//         // LatestHandshake: peer.LatestHandshake,
-//         ListenPort: peer.Endpoint ? parseInt(peer.Endpoint.split(':')[1]) : null,
-//         // DirectAllocationIds: allocations,
-//       });
-//     }
-//
-//     const tunnelMatch = this.dustClient
-//       .findRecord('Tunnel', record =>
-//         record.InterfaceIds.includes(interfaceId)
-//         && record.InterfaceIds.includes(peerIfaceId));
-//     if (tunnelMatch) {
-//       // TODO: update LatestHandshake
-//     } else {
-//       console.log('Creating Tunnel to peer', peer.PublicKey);
-//       await this.dustClient.createRecord('Tunnel', {
-//         InterfaceIds: [ interfaceId, peerIfaceId ],
-//         LatestHandshake: peer.LatestHandshake,
-//       });
-//     }
-//   }
+  async syncIfacePeers(nodeHandle, identityHandle, peerList) {
+    const knownPeerings = this.recordManager
+      .findRecords('WgPeering', record =>
+        record.LocalIdentityId === identityHandle._id);
+    const knownTunnels = this.recordManager
+      .findRecords('WgTunnel', record =>
+        record.WgIdentityIds.includes(identityHandle._id));
+
+    for (const peer of peerList) {
+      // TODO: use cached publickey list
+      const remoteIdentity = await this.ensureRemoteWgIdentity({
+        PublicKey: peer.PublicKey,
+        InternetEndpoint: peer.Endpoint,
+      });
+      console.log('remote ident', remoteIdentity, 'for', peer.PublicKey);
+
+      const tunnelFields = {
+        PreSharedKey: peer.PreSharedKey,
+        IsEnabled: true, // TODO: only if 'Observing'
+      };
+      let tunnel = knownTunnels.find(t =>
+        t.latestData.WgIdentityIds.includes(remoteIdentity._id));
+      if (tunnel) {
+        await tunnel.commitFields(tunnelFields);
+      } else {
+        tunnel = await this.recordManager.commitNew('WgTunnel', {
+          WgIdentityIds: [identityHandle._id, remoteIdentity._id],
+          ...tunnelFields,
+        });
+      }
+
+      const peeringFields = {
+        LatestHandshake: peer.LatestHandshake,
+        TransferRx: peer.TransferRx,
+        TransferTx: peer.TransferTx,
+        PersistentKeepalive: peer.PersistentKeepalive,
+        AllowedIps: peer.AllowedIps,
+      };
+
+      let peering = knownPeerings.find(p =>
+        p.latestData.WgTunnelId === tunnel._id);
+      if (peering) {
+        await peering.commitFields(peeringFields);
+      } else {
+        peering = await this.recordManager.commitNew('WgPeering', {
+          LocalIdentityId: identityHandle._id,
+          ForeignIdentityId: remoteIdentity._id,
+          WgTunnelId: tunnel._id,
+          ...peeringFields,
+        });
+      }
+
+    } // each peer
+
+  }
+}
