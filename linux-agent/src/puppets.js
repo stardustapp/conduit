@@ -1,7 +1,8 @@
 const {runAction} = require('./commands/_actions');
 
 class PuppetBase {
-  constructor(reactiveConfig) {
+  constructor(manager, reactiveConfig) {
+    this.puppetManager = manager;
     this.currentMode = 'Initial';
     reactiveConfig.onChange(this.acceptConfig.bind(this));
   }
@@ -72,6 +73,30 @@ class AgentUpgradePuppet extends PuppetBase {
   }
 }
 
+class SmartDrivePuppet extends PuppetBase {
+  async submitNow() {
+    try {
+      const data = await smartctlCmd.dumpAll();
+      console.log(JSON.stringify(data));
+      await ddpclient.call('/Node/SyncActual', 'SmartDrive', data);
+      console.log('Reported SMART data from', data.length, 'storage drives');
+    } catch (err) {
+      console.log('SmartDrivePuppet failed to gather drive data:', err);
+    }
+  }
+
+  onSelfDrivingStart() {
+    const submit = () => this.submitNow();
+    // run now and then also later
+    submit();
+    this.timer = setInterval(submit, 60 * 60 * 1000); // Every hour
+  }
+  onSelfDrivingStop() {
+    clearInterval(this.timer);
+    this.timer = null;
+  }
+}
+
 exports.PuppetManager = class PuppetManager {
   constructor(ddpClient) {
     this.ddpClient = ddpClient;
@@ -92,7 +117,7 @@ exports.PuppetManager = class PuppetManager {
       .filter(record => record.id === contrKey)
       .reactive().one();
 
-    const controller = new implConstructor(reactiveConfig);
+    const controller = new implConstructor(this, reactiveConfig);
     this.controllers.set(contrKey, controller);
   }
 }

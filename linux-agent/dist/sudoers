@@ -9,5 +9,7 @@ conduit ALL=NOPASSWD: /bin/systemctl start pod-*, /bin/systemctl stop pod-*
 conduit ALL=NOPASSWD: /bin/systemctl start container-*, /bin/systemctl stop container-*
 conduit ALL=NOPASSWD: /bin/systemctl enable /opt/conduit-agent/unit-files/*, /bin/systemctl disable /opt/conduit-agent/unit-files/*
 
+conduit ALL=NOPASSWD: /usr/sbin/smartctl -a -- *
+
 # run complex scripts like agent upgrades
 conduit ALL=NOPASSWD: /opt/conduit-agent/src/actions/* *

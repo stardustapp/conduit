@@ -17,6 +17,7 @@ const wgCmd = require('./commands/wg.js');
 const ipCmd = require('./commands/ip.js');
 const systemctlCmd = require('./commands/systemctl.js');
 const dpkgQueryCmd = require('./commands/dpkg-query.js');
+const smartctlCmd = require('./commands/smartctl.js');
 const {readOsRelease} = require('./files/etc.os-release.js');
 
 const packageJson = require('../package.json');
@@ -77,6 +78,7 @@ async function dumpNetDevices() {
       (await dpkgQueryCmd.isPkgInstalledOk('conduit-agent')) && 'AgentUpgrade',
       false && 'ContainerNetwork',
       (await ipCmd.test()) && 'NetDevice',
+      (await smartctlCmd.test()) && 'SmartDrive',
       false && 'PodMan',
       (hasWgTools && hasWgQuickUnit) && 'WireGuard',
     ].filter(x => x),
