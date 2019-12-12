@@ -24,4 +24,8 @@ then
   exit 6
 fi
 
-nohup dpkg -i "${PackageFilename}"
+# try handing off the actual install so it restarting us doesn't interupt it
+if which systemd-run
+then systemd-run -d dpkg -i "${PackageFilename}"
+else dpkg -i "${PackageFilename}"
+fi
