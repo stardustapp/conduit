@@ -10,7 +10,6 @@ ExecStart=/opt/conduit-agent/src/cli.js
 Environment=CONDUIT_WS_URI=wss://conduit.wg69.net/websocket
 Restart=always
 RestartSec=60
-StartLimitIntervalSec=0
 
 [Install]
 WantedBy=multi-user.target
