@@ -104,7 +104,7 @@ function readTextTable(lines) {
     }, 0);
 
   // last field reads until the last column of the data row
-  fields.slice(-1)[0].end = -1;
+  fields.slice(-1)[0].end = undefined;
 
   // slice each field out of the lines
   return lines.map(line => {
