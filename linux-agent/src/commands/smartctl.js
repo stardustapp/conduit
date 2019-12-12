@@ -118,7 +118,12 @@ exports.dumpAll = async function() {
     .scanDevices();
   return await Promise
     .all(devices
-      .map(x => this.readAllForDevice(x.path)));
+      .map(x => this
+        .readAllForDevice(x.path)
+        .then(findings => ({
+          Device: x,
+          ...findings,
+        }))));
 };
 
 // basic test entrypoint

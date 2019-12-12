@@ -24,4 +24,4 @@ then
   exit 6
 fi
 
-dpkg -i "${PackageFilename}"
+nohup dpkg -i "${PackageFilename}"
