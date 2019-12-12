@@ -118,7 +118,7 @@ async function dumpNetDevices() {
 
   console.log('Sleeping...');
   while (true) {
-    await sleepMs(30 * 1000);
+    await sleepMs(55 * 1000);
     ddpclient.ddpConnection.messageQueue.push({ msg: 'ping' });
   }
 

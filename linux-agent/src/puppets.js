@@ -1,9 +1,10 @@
 const {runAction} = require('./commands/_actions');
 
 class PuppetBase {
-  constructor(manager, reactiveConfig) {
+  constructor(manager, reactiveConfig, syncActual) {
     this.puppetManager = manager;
     this.currentMode = 'Initial';
+    this.syncActual = syncActual;
     reactiveConfig.onChange(this.acceptConfig.bind(this));
   }
   log(...msg) {
@@ -25,6 +26,13 @@ class PuppetBase {
     } else if (this.currentMode === 'SelfDriving') {
       this.onSelfDrivingStop(newMode);
     }
+
+    const wasObserving = ['Observing', 'SelfDriving'].includes(this.currentMode);
+    if (['Observing', 'SelfDriving'].includes(newMode)) {
+      if (!wasObserving) this.onObservingStart(params);
+    } else if (wasObserving) {
+      this.onObservingStop(newMode);
+    }
   }
 
   onSelfDrivingStart(initialParams) {
@@ -37,6 +45,13 @@ class PuppetBase {
   }
   onSelfDrivingStop(newMode) {
     TODO(`${this.constructor.name} onSelfDrivingStop`, newMode);
+  }
+
+  onObservingStart() {
+    TODO(`${this.constructor.name} onObservingStart`, );
+  }
+  onObservingStop(newMode) {
+    TODO(`${this.constructor.name} onObservingStop`, newMode);
   }
 }
 
@@ -73,25 +88,26 @@ class AgentUpgradePuppet extends PuppetBase {
   }
 }
 
+const smartctlCmd = require('./commands/smartctl.js');
 class SmartDrivePuppet extends PuppetBase {
-  async submitNow() {
+  async submitObservations() {
     try {
       const data = await smartctlCmd.dumpAll();
       console.log(JSON.stringify(data));
-      await ddpclient.call('/Node/SyncActual', 'SmartDrive', data);
+      await this.syncActual(data);
       console.log('Reported SMART data from', data.length, 'storage drives');
     } catch (err) {
       console.log('SmartDrivePuppet failed to gather drive data:', err);
     }
   }
 
-  onSelfDrivingStart() {
-    const submit = () => this.submitNow();
+  onObservingStart() {
+    const submit = () => this.submitObservations();
     // run now and then also later
     submit();
     this.timer = setInterval(submit, 60 * 60 * 1000); // Every hour
   }
-  onSelfDrivingStop() {
+  onObservingStop() {
     clearInterval(this.timer);
     this.timer = null;
   }
@@ -102,6 +118,7 @@ exports.PuppetManager = class PuppetManager {
     this.ddpClient = ddpClient;
     this.controllers = new Map;
     this.registerPuppet('AgentUpgrade', AgentUpgradePuppet);
+    this.registerPuppet('SmartDrive', SmartDrivePuppet);
 
     // this.configSub = ddpClient
     //   .collection('Controllers')
@@ -117,7 +134,10 @@ exports.PuppetManager = class PuppetManager {
       .filter(record => record.id === contrKey)
       .reactive().one();
 
-    const controller = new implConstructor(this, reactiveConfig);
+    const syncActual = actual =>
+      this.ddpClient.call('/Node/SyncActual', contrKey, actual);
+
+    const controller = new implConstructor(this, reactiveConfig, syncActual);
     this.controllers.set(contrKey, controller);
   }
 }
