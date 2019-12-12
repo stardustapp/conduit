@@ -92,7 +92,7 @@ function readTextTable(lines) {
   // record column positioning for each header field
   const fields = [];
   lines.shift()
-    .match(/ *[^ ]+ +/g) // capture including whitespace
+    .match(/ *[^ ]+ */g) // capture including whitespace
     .reduce((accum, raw) => {
       fields.push({
         text: raw.trim(),
@@ -102,6 +102,9 @@ function readTextTable(lines) {
       // accumulate starting index
       return accum+raw.length;
     }, 0);
+
+  // last field reads until the last column of the data row
+  fields.slice(-1)[0].end = -1;
 
   // slice each field out of the lines
   return lines.map(line => {
