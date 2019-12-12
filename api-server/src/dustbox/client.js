@@ -28,7 +28,9 @@ exports.DustClient = class DustClient {
     });
   }
 
-  // TODO: subscribe to/follow package-defined subtyping
+  callServerMethod(name, ...args) {
+    return this.ddpclient.call('/dust/method', this.packageId, name, ...args);
+  }
 
   findRecord(typeName, selector) {
     const record = this.ddpclient

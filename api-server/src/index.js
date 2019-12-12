@@ -67,12 +67,13 @@ const {DDPServer} = require('./ddp-server.js');
   // const meshController = new MeshController(recordManager);
 
   // Load and set up self-driving controllers
-  const controllerManager = new ControllerManager(recordManager, {
+  const controllerManager = new ControllerManager(dustClient, recordManager, {
     AgentUpgrade: require('./controllers/AgentUpgrade.js').AgentUpgrade,
     ContainerNetwork: require('./controllers/ContainerNetwork.js').ContainerNetwork,
-    PodMan: require('./controllers/PodMan.js').PodMan,
-    WireGuard: require('./controllers/WireGuard.js').WireGuard,
     NetDevice: require('./controllers/NetDevice.js').NetDevice,
+    PodMan: require('./controllers/PodMan.js').PodMan,
+    SmartDrive: require('./controllers/SmartDrive.js').SmartDrive,
+    WireGuard: require('./controllers/WireGuard.js').WireGuard,
   });
 
   // configure the API surface
