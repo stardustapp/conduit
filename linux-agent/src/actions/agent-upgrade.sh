@@ -24,8 +24,8 @@ then
   exit 6
 fi
 
-# try handing off the actual install so it restarting us doesn't interupt it
+# try handing off the actual install so it restarting us doesn't interupt it too
 if which systemd-run
-then systemd-run -d dpkg -i "${PackageFilename}"
+then systemd-run dpkg -i "$(pwd)/${PackageFilename}"
 else dpkg -i "${PackageFilename}"
 fi
