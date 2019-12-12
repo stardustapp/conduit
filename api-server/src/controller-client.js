@@ -1,3 +1,11 @@
+function noopSelfDriver(nodeHandle, contrKey, subscriber) {
+  TODO(`${nodeHandle} wanted to self-drive ${contrKey} but it is NOT IMPLEMENTED`);
+  subscriber.informFields({
+    unimplemented: true,
+  });
+  return {stop: () => {}};
+}
+
 exports.ControllerClient = class ControllerClient {
   constructor(nodeHandle, ddpClient, controllerManager) {
     this.nodeHandle = nodeHandle;
@@ -62,7 +70,9 @@ exports.ControllerClient = class ControllerClient {
       const subscriber = {
         informFields: this.sendSelfDrivingFields.bind(this, contrKey),
       };
-      const subscription = controller.publishSelfDriving(this.nodeHandle, subscriber);
+      const subscription = controller.publishSelfDriving
+        ? controller.publishSelfDriving(this.nodeHandle, subscriber)
+        : noopSelfDriver(this.nodeHandle, contrKey, subscriber);
       this.contrSubscriptions.set(contrKey, subscription);
 
       // TODO: more critical probably
