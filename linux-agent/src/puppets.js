@@ -27,8 +27,8 @@ class PuppetBase {
       this.onSelfDrivingStop(newMode);
     }
 
-    const wasObserving = ['Observing', 'SelfDriving'].includes(this.currentMode);
-    if (['Observing', 'SelfDriving'].includes(newMode)) {
+    const wasObserving = this.shouldObserveMode(this.currentMode);
+    if (this.shouldObserveMode(newMode)) {
       if (!wasObserving) this.onObservingStart(params);
     } else if (wasObserving) {
       this.onObservingStop(newMode);
@@ -47,8 +47,11 @@ class PuppetBase {
     TODO(`${this.constructor.name} onSelfDrivingStop`, newMode);
   }
 
+  shouldObserveMode(mode) {
+    return mode === 'Observing';
+  }
   onObservingStart() {
-    TODO(`${this.constructor.name} onObservingStart`, );
+    TODO(`${this.constructor.name} onObservingStart`);
   }
   onObservingStop(newMode) {
     TODO(`${this.constructor.name} onObservingStop`, newMode);
@@ -93,7 +96,7 @@ class SmartDrivePuppet extends PuppetBase {
   async submitObservations() {
     try {
       const data = await smartctlCmd.dumpAll();
-      console.log(JSON.stringify(data));
+      // console.log('SMART:', JSON.stringify(data));
       await this.syncActual(data);
       console.log('Reported SMART data from', data.length, 'storage drives');
     } catch (err) {
@@ -101,6 +104,9 @@ class SmartDrivePuppet extends PuppetBase {
     }
   }
 
+  shouldObserveMode(mode) {
+    return ['Observing', 'SelfDriving'].includes(mode);
+  }
   onObservingStart() {
     const submit = () => this.submitObservations();
     // run now and then also later
@@ -113,12 +119,38 @@ class SmartDrivePuppet extends PuppetBase {
   }
 }
 
+const cniFile = require('./files/etc.cni.js');
+class ContainerNetworkPuppet extends PuppetBase {
+  async onObservingStart() {
+    try {
+      const data = await cniFile.dumpAllNetworks();
+      console.log(JSON.stringify(data));
+      await this.syncActual(data);
+      console.log('Reported', data.length, 'CNI networks');
+    } catch (err) {
+      console.log('ContainerNetworkPuppet failed to gather CNI data:', err);
+    }
+  }
+
+  async onSelfDriving({confLists}) {
+    const existingNets = new Set(await cniFile.listAllNetworks());
+    for (const net of confLists) {
+      existingNets.delete(net.ConfListName);
+      await cniFile.writeNetwork(net);
+    }
+    for (const oldNet of Array.from(existingNets)) {
+      await cniFile.deleteNetwork(oldNet);
+    }
+  }
+}
+
 exports.PuppetManager = class PuppetManager {
   constructor(ddpClient) {
     this.ddpClient = ddpClient;
     this.controllers = new Map;
     this.registerPuppet('AgentUpgrade', AgentUpgradePuppet);
     this.registerPuppet('SmartDrive', SmartDrivePuppet);
+    this.registerPuppet('ContainerNetwork', ContainerNetworkPuppet);
 
     // this.configSub = ddpClient
     //   .collection('Controllers')

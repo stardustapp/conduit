@@ -1,5 +1,5 @@
 const execa = require('execa');
-const {execForLine, readWholeStream} = require('./_lib.js');
+const {readWholeStream} = require('./_lib.js');
 
 exports.test = async function() {
   const subprocess = execa(`smartctl`, [`--version`], {
