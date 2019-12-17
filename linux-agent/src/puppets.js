@@ -56,6 +56,15 @@ class PuppetBase {
   onObservingStop(newMode) {
     TODO(`${this.constructor.name} onObservingStop`, newMode);
   }
+
+  trySubmitObservations() {
+    return this
+      .submitObservations()
+      .catch(err => {
+        console.log(`${this.constructor.name} failed to submitObservations:`, err);
+        return err;
+      });
+  }
 }
 
 const myVersion = require('../package.json').version;
@@ -94,24 +103,21 @@ class AgentUpgradePuppet extends PuppetBase {
 const smartctlCmd = require('./commands/smartctl.js');
 class SmartDrivePuppet extends PuppetBase {
   async submitObservations() {
-    try {
-      const data = await smartctlCmd.dumpAll();
-      // console.log('SMART:', JSON.stringify(data));
-      await this.syncActual(data);
-      console.log('Reported SMART data from', data.length, 'storage drives');
-    } catch (err) {
-      console.log('SmartDrivePuppet failed to gather drive data:', err);
-    }
+    const data = await smartctlCmd.dumpAll();
+    // console.log('SMART:', JSON.stringify(data));
+    await this.syncActual(data);
+    console.log('Reported SMART data from', data.length, 'storage drives');
   }
 
   shouldObserveMode(mode) {
     return ['Observing', 'SelfDriving'].includes(mode);
   }
   onObservingStart() {
-    const submit = () => this.submitObservations();
     // run now and then also later
-    submit();
-    this.timer = setInterval(submit, 60 * 60 * 1000); // Every hour
+    this.trySubmitObservations();
+    this.timer = setInterval(this
+      .trySubmitObservations.bind(this),
+      60 * 60 * 1000); // Every hour
   }
   onObservingStop() {
     clearInterval(this.timer);
@@ -121,15 +127,15 @@ class SmartDrivePuppet extends PuppetBase {
 
 const cniFile = require('./files/etc.cni.js');
 class ContainerNetworkPuppet extends PuppetBase {
-  async onObservingStart() {
-    try {
-      const data = await cniFile.dumpAllNetworks();
-      console.log(JSON.stringify(data));
-      await this.syncActual(data);
-      console.log('Reported', data.length, 'CNI networks');
-    } catch (err) {
-      console.log('ContainerNetworkPuppet failed to gather CNI data:', err);
-    }
+  async submitObservations() {
+    const data = await cniFile.dumpAllNetworks();
+    console.log(JSON.stringify(data));
+    await this.syncActual(data);
+    console.log('Reported', data.length, 'CNI networks');
+  }
+
+  onObservingStart() {
+    return this.trySubmitObservations();
   }
 
   async onSelfDriving({confLists}) {
@@ -144,13 +150,45 @@ class ContainerNetworkPuppet extends PuppetBase {
   }
 }
 
+const podmanCmd = require('./commands/podman.js');
+class PodManPuppet extends PuppetBase {
+  async submitObservations() {
+    // TODO: look up which pods are already known, don't re-inspect them
+
+    // const data = await smartctlCmd.dumpAll();
+    // console.log('SMART:', JSON.stringify(data));
+    await this.syncActual(data);
+    console.log('Reported pods from', data.length, 'storage drives');
+  }
+
+  shouldObserveMode(mode) {
+    return ['Observing', 'SelfDriving'].includes(mode);
+  }
+  onObservingStart() {
+    return this.trySubmitObservations();
+  }
+
+  // async onSelfDriving({confLists}) {
+  //   const existingNets = new Set(await cniFile.listAllNetworks());
+  //   for (const net of confLists) {
+  //     existingNets.delete(net.ConfListName);
+  //     await cniFile.writeNetwork(net);
+  //   }
+  //   for (const oldNet of Array.from(existingNets)) {
+  //     await cniFile.deleteNetwork(oldNet);
+  //   }
+  // }
+}
+
 exports.PuppetManager = class PuppetManager {
   constructor(ddpClient) {
     this.ddpClient = ddpClient;
     this.controllers = new Map;
+
     this.registerPuppet('AgentUpgrade', AgentUpgradePuppet);
     this.registerPuppet('SmartDrive', SmartDrivePuppet);
     this.registerPuppet('ContainerNetwork', ContainerNetworkPuppet);
+    this.registerPuppet('PodMan', PodManPuppet);
 
     // this.configSub = ddpClient
     //   .collection('Controllers')
