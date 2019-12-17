@@ -48,17 +48,19 @@ exports.inspectPodConf = async function(podId, enabledUnits=null) {
   enabledUnits = enabledUnits || await exports.listEnabledUnits(podUnitName);
 
   const {Config} = JSON.parse(stdout);
+  const infraConfig = Config.infraConfig || {};
   return {
     Labels: Config.labels,
     // TODO: NetworkName
     RestartAfter: [
       enabledUnits.includes(podUnitName) && `enabledUnits`
     ].filter(x => x),
-    PublishPorts: (Config.infraConfig.infraPortBindings || []).map(port => {
+    PublishPorts: (infraConfig.infraPortBindings || []).map(port => {
       const tokens = [port.hostIP, port.hostPort, port.containerPort];
       while (!tokens[0]) tokens.shift();
       return tokens.join(':');
     }),
+    NetworkNames: infraConfig.infraNetworks,
   };
 };
 

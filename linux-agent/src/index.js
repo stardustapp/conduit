@@ -18,6 +18,7 @@ const ipCmd = require('./commands/ip.js');
 const systemctlCmd = require('./commands/systemctl.js');
 const dpkgQueryCmd = require('./commands/dpkg-query.js');
 const smartctlCmd = require('./commands/smartctl.js');
+const podmanCmd = require('./commands/podman.js');
 const {readOsRelease} = require('./files/etc.os-release.js');
 const cniFile = require('./files/etc.cni.js');
 
@@ -80,7 +81,7 @@ async function dumpNetDevices() {
       (await cniFile.test()) && 'ContainerNetwork',
       (await ipCmd.test()) && 'NetDevice',
       (await smartctlCmd.test()) && 'SmartDrive',
-      false && 'PodMan',
+      (await podmanCmd.test()) && 'PodMan',
       (hasWgTools && hasWgQuickUnit) && 'WireGuard',
     ].filter(x => x),
   });
