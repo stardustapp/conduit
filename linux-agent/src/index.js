@@ -35,20 +35,6 @@ ddpclient.on('disconnected', () => {
   process.exit(5);
 });
 
-async function dumpNetDevices() {
-  const ifaces = await ipCmd.dumpDevices();
-  // TODO: ifaces = ifaces.concat(await wgCmd.dumpAll());
-  // TODO: add CNI ifaces
-
-  const primaryIfaceId = await ipCmd.getDefaultDevice();
-  const primaryIface = ifaces.find(x => x.DeviceName === primaryIfaceId);
-  if (primaryIface) {
-    primaryIface.NetFlags.push('INTERNET');
-  }
-
-  return ifaces;
-}
-
 (async () => {
   console.log();
 
@@ -85,7 +71,7 @@ async function dumpNetDevices() {
       (hasWgTools && hasWgQuickUnit) && 'WireGuard',
     ].filter(x => x),
   });
-  console.log('Registered with mesh controller.', {identity});
+  console.log('Registered with mesh controller.', identity);
 
   // hook self-driving controller clients
   const puppetManager = new PuppetManager(ddpclient);
@@ -94,29 +80,8 @@ async function dumpNetDevices() {
   const nodeSub = ddpclient.subscribe('/Node/SelfDriving', identity);
   await nodeSub.ready();
 
-  // submit our observed states for api-server to absorb
-  const syncDevices = async () => {
-    const controllers = {};
-    for (const controllerDoc of ddpclient.collection('Controllers').fetch()) {
-      controllers[controllerDoc.id] = controllerDoc;
-    }
-
-    if (controllers.NetDevice.Mode !== 'Paused') {
-      const netDevices = await dumpNetDevices();
-      await ddpclient.call('/Node/SyncActual', 'NetDevice', netDevices);
-    }
-
-    if (controllers.WireGuard.Mode !== 'Paused') {
-      const wgActual = {identities: await wgCmd.dumpAll()};
-      await ddpclient.call('/Node/SyncActual', 'WireGuard', wgActual);
-    }
-
-  }
-  await syncDevices();
-  setInterval(syncDevices/*TODO:ERRORHANDLE*/, 5 * 60 * 1000); // Every 5 Minutes
-
   const controllers = ddpclient.collection('Controllers').fetch();
-  console.log('received', controllers.length, 'Controllers');
+  console.log('Received', controllers.length, 'Controller records');
 
   console.log('Sleeping...');
   while (true) {

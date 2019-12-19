@@ -8,6 +8,8 @@ class PuppetManager {
     this.registerPuppet('SmartDrive', require('./SmartDrive.js'));
     this.registerPuppet('ContainerNetwork', require('./ContainerNetwork.js'));
     this.registerPuppet('PodMan', require('./PodMan.js'));
+    this.registerPuppet('NetDevice', require('./NetDevice.js'));
+    this.registerPuppet('WireGuard', require('./WireGuard.js'));
 
     // this.configSub = ddpClient
     //   .collection('Controllers')
