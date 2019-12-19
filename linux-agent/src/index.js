@@ -13,14 +13,9 @@ global.TODO = function (msg) {
 const {PuppetManager} = require('./puppets/_manager.js');
 
 const {checkForKernelModule} = require('./commands/lsmod.js');
-const wgCmd = require('./commands/wg.js');
 const ipCmd = require('./commands/ip.js');
 const systemctlCmd = require('./commands/systemctl.js');
-const dpkgQueryCmd = require('./commands/dpkg-query.js');
-const smartctlCmd = require('./commands/smartctl.js');
-const podmanCmd = require('./commands/podman.js');
 const {readOsRelease} = require('./files/etc.os-release.js');
-const cniFile = require('./files/etc.cni.js');
 
 const packageJson = require('../package.json');
 
@@ -38,11 +33,7 @@ ddpclient.on('disconnected', () => {
 (async () => {
   console.log();
 
-  const osRelease = await readOsRelease();
   const hasSystemd = await systemctlCmd.canConverse();
-
-  const hasWgTools = await wgCmd.test();
-  const hasWgQuickUnit = hasSystemd && await systemctlCmd.hasUnitFile('wg-quick@.service');
 
   const primaryIfaceId = await ipCmd.getDefaultDevice();
   const primaryIface = os.networkInterfaces()[primaryIfaceId];
@@ -51,30 +42,28 @@ ddpclient.on('disconnected', () => {
   await ddpclient.connect();
   console.log('upstream connected');
 
-  const identity = await ddpclient.call('/Node/Register', {
+  // hook self-driving controller clients
+  const puppetManager = new PuppetManager(ddpclient);
+
+  const startT = +new Date;
+  const registerBody = {
     // Node
     AgentVersion: packageJson.version,
     InternalAddresses: primaryIface.map(x => x.address),
     // LinuxNode
     SelfHostname: os.hostname(),
-    OsRelease: osRelease,
+    OsRelease: await readOsRelease(),
     InitFlavor: hasSystemd ? 'systemd' : 'unknown',
     PrimaryMac: primaryIface[0].mac,
     UserInfo: os.userInfo(),
     HasWgKernelModule: await checkForKernelModule('wireguard'),
-    SelfDrivingAvailable: [ // TODO: all these hard-codeds
-      (await dpkgQueryCmd.isPkgInstalledOk('conduit-agent')) && 'AgentUpgrade',
-      (await cniFile.test()) && 'ContainerNetwork',
-      (await ipCmd.test()) && 'NetDevice',
-      (await smartctlCmd.test()) && 'SmartDrive',
-      (await podmanCmd.test()) && 'PodMan',
-      (hasWgTools && hasWgQuickUnit) && 'WireGuard',
-    ].filter(x => x),
-  });
-  console.log('Registered with mesh controller.', identity);
+    SelfDrivingAvailable: await puppetManager.listSelfDrivables(),
+  };
+  const identMs = +new Date - startT;
+  console.log('Built registration payload in', identMs, 'millis');
 
-  // hook self-driving controller clients
-  const puppetManager = new PuppetManager(ddpclient);
+  const identity = await ddpclient.call('/Node/Register', registerBody);
+  console.log('Registered with mesh controller as', identity);
 
   // subscribe to our data
   const nodeSub = ddpclient.subscribe('/Node/SelfDriving', identity);

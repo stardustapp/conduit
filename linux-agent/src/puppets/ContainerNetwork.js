@@ -1,6 +1,10 @@
 const cniFile = require('../files/etc.cni.js');
 
 module.exports = class ContainerNetworkPuppet extends require('./_base.js') {
+  async canSelfDrive() {
+    return await cniFile.test();
+  }
+
   async submitObservations() {
     const data = await cniFile.dumpAllNetworks();
     console.log(JSON.stringify(data));

@@ -2,6 +2,10 @@ const podmanCmd = require('../commands/podman.js');
 const REPORTING_CONFIGS = true; // TODO
 
 module.exports = class PodManPuppet extends require('./_base.js') {
+  async canSelfDrive() {
+    return await podmanCmd.test();
+  }
+
   constructor(manager, reactiveConfig, syncActual) {
     super(manager, reactiveConfig, syncActual);
 

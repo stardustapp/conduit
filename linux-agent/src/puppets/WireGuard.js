@@ -1,6 +1,14 @@
 const wgCmd = require('../commands/wg.js');
+const systemctlCmd = require('../commands/systemctl.js');
 
 module.exports = class WireGuardPuppet extends require('./_base.js') {
+  async canSelfDrive() {
+    const hasSystemd = await systemctlCmd.canConverse();
+    const hasWgTools = await wgCmd.test();
+    const hasWgQuickUnit = hasSystemd && await systemctlCmd.hasUnitFile('wg-quick@.service');
+    return hasWgTools && hasWgQuickUnit;
+  }
+
   async submitObservations() {
     await this.syncActual({
       identities: await wgCmd.dumpAll(),

@@ -31,4 +31,15 @@ class PuppetManager {
     const controller = new implConstructor(this, reactiveConfig, syncActual);
     this.controllers.set(contrKey, controller);
   }
+
+  listSelfDrivables() {
+    return Promise
+      .all(Array
+        .from(this.controllers)
+        .map(([key, inst]) => inst
+          .canSelfDrive()
+          .then(bool => bool && key)))
+      .then(results => results
+        .filter(key => key));
+  }
 }

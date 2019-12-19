@@ -2,8 +2,13 @@ const semver = require('semver');
 
 const myVersion = require('../../package.json').version;
 const {runAction} = require('../commands/_actions.js');
+const dpkgQueryCmd = require('../commands/dpkg-query.js');
 
 module.exports = class AgentUpgradePuppet extends require('./_base.js') {
+  async canSelfDrive() {
+    return await dpkgQueryCmd.isPkgInstalledOk('conduit-agent');
+  }
+
   onSelfDriving({latestVersion}) {
     this.cancelAnyTimer('Cancelling pending upgrade due to new config');
     const {AgentName, VersionString, GitCommit, DebUrl} = latestVersion;

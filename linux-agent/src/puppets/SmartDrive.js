@@ -1,6 +1,10 @@
 const smartctlCmd = require('../commands/smartctl.js');
 
 module.exports = class SmartDrivePuppet extends require('./_base.js') {
+  async canSelfDrive() {
+    return await smartctlCmd.test();
+  }
+
   async submitObservations() {
     const data = await smartctlCmd.dumpAll();
     // console.log('SMART:', JSON.stringify(data));

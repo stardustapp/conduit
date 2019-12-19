@@ -1,6 +1,10 @@
 const ipCmd = require('../commands/ip.js');
 
 module.exports = class NetDevicePuppet extends require('./_base.js') {
+  async canSelfDrive() {
+    return await ipCmd.test();
+  }
+
   async submitObservations() {
     const ifaces = await ipCmd.dumpDevices();
     // TODO: ifaces = ifaces.concat(await wgCmd.dumpAll());
@@ -13,7 +17,7 @@ module.exports = class NetDevicePuppet extends require('./_base.js') {
     }
 
     await this.syncActual(ifaces);
-    console.log('Reported', data.length, 'NetDevices');
+    console.log('Reported', ifaces.length, 'NetDevices');
   }
 
   onObservingStart() {
