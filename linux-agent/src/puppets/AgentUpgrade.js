@@ -1,0 +1,35 @@
+const semver = require('semver');
+
+const myVersion = require('../../package.json').version;
+const {runAction} = require('../commands/_actions.js');
+
+module.exports = class AgentUpgradePuppet extends require('./_base.js') {
+  onSelfDriving({latestVersion}) {
+    this.cancelAnyTimer('Cancelling pending upgrade due to new config');
+    const {AgentName, VersionString, GitCommit, DebUrl} = latestVersion;
+
+    if (VersionString === myVersion) return this.log(
+      `Ignoring version ${VersionString}, same as current version ${myVersion}`);
+    if (semver.gt(myVersion, VersionString)) return this.log(
+      `Ignoring version ${VersionString}, looks older than current version ${myVersion}`);
+    if (!DebUrl) return this.log(
+      `Ignoring version ${VersionString}, lacks a DebUrl value`);
+
+    this.log('WILL UPGRADE from', myVersion, 'to', AgentName, VersionString, 'in 5s!');
+    this.timer = setTimeout(async () => {
+      this.timer = null;
+      this.log('Starting agent upgrade script...');
+      await runAction('agent-upgrade', [VersionString, DebUrl]);
+    }, 5000);
+  }
+  onSelfDrivingStop() {
+    this.cancelAnyTimer('Cancelling pending upgrade due to self-driving disengagement');
+  }
+  cancelAnyTimer(msg) {
+    if (this.timer) {
+      this.log(msg);
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+  }
+}

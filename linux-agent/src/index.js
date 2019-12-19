@@ -10,7 +10,7 @@ global.TODO = function (msg) {
   console.warn('--> TODO:', msg);
 }
 
-const {PuppetManager} = require('./puppets.js');
+const {PuppetManager} = require('./puppets/_manager.js');
 
 const {checkForKernelModule} = require('./commands/lsmod.js');
 const wgCmd = require('./commands/wg.js');
