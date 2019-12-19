@@ -13,8 +13,9 @@ exports.ControllerClient = class ControllerClient {
     this.controllerManager = controllerManager;
 
     this.controllerModes = new Map;
-    this.controllerFields = new Map;
-    this.contrSubscriptions = new Map;
+    this.selfDrivingFields = new Map;
+    this.selfDrivingSubs = new Map;
+    this.contextSubs = new Map;
 
     const nodeCursor = nodeHandle.reactiveCursor();
 
@@ -28,7 +29,10 @@ exports.ControllerClient = class ControllerClient {
 
   stop() {
     console.log('Stopping ControllerClient for', this.nodeHandle);
-    for (const subscription of this.contrSubscriptions.values()) {
+    for (const subscription of this.selfDrivingSubs.values()) {
+      subscription.stop();
+    }
+    for (const subscription of this.contextSubs.values()) {
       subscription.stop();
     }
 
@@ -36,8 +40,9 @@ exports.ControllerClient = class ControllerClient {
     this.nodeOnChange = null;
 
     this.controllerModes = null;
-    this.controllerFields = null;
-    this.contrSubscriptions = null;
+    this.selfDrivingFields = null;
+    this.selfDrivingSubs = null;
+    this.contextSubs = null;
   }
 
   updateConfig(nodeData) {
@@ -61,6 +66,17 @@ exports.ControllerClient = class ControllerClient {
 
     const controller = this.controllerManager.controllers.get(contrKey);
 
+    // Optionally publish useful state as long as the puppet is there to listen
+    if (newMode !== 'Unavailable' && controller.publishContext) {
+      const sub = controller.publishContext(this.nodeHandle, this.ddpClient);
+      this.contextSubs.set(contrKey, sub);
+    } else {
+      if (this.contextSubs.has(contrKey)) {
+        this.contextSubs.get(contrKey).stop();
+        this.contextSubs.delete(contrKey);
+      }
+    }
+
     if (newMode === 'SelfDriving') {
       let sentInitial = !!oldMode;
       let addtlFields = {
@@ -73,16 +89,17 @@ exports.ControllerClient = class ControllerClient {
       const subscription = controller.publishSelfDriving
         ? controller.publishSelfDriving(this.nodeHandle, subscriber)
         : noopSelfDriver(this.nodeHandle, contrKey, subscriber);
-      this.contrSubscriptions.set(contrKey, subscription);
+      this.selfDrivingSubs.set(contrKey, subscription);
 
       // TODO: more critical probably
-      if (!this.controllerFields.has(contrKey)) {
+      if (!this.selfDrivingFields.has(contrKey)) {
         console.warn('BUG: Controller', contrKey, "failed to send initial", newMode, "fields");
       }
 
     } else {
-      if (this.contrSubscriptions.has(contrKey)) {
-        this.contrSubscriptions.get(contrKey).stop();
+      if (this.selfDrivingSubs.has(contrKey)) {
+        this.selfDrivingSubs.get(contrKey).stop();
+        this.selfDrivingSubs.delete(contrKey);
       }
       this.resetSelfDrivingMode(contrKey, newMode);
     }
@@ -93,10 +110,10 @@ exports.ControllerClient = class ControllerClient {
   sendSelfDrivingFields(contrKey, fields) {
     const sentInitial = this.controllerModes.has(contrKey);
 
-    const sentSelfDriving = this.controllerFields.has(contrKey);
+    const sentSelfDriving = this.selfDrivingFields.has(contrKey);
     const internalFields = {};
     if (!sentSelfDriving) {
-      this.controllerFields.set(contrKey, new Set);
+      this.selfDrivingFields.set(contrKey, new Set);
       internalFields.Mode = 'SelfDriving';
     }
 
@@ -106,7 +123,7 @@ exports.ControllerClient = class ControllerClient {
         ...fields,
       }});
 
-    const sentFields = this.controllerFields.get(contrKey);
+    const sentFields = this.selfDrivingFields.get(contrKey);
     for (const key in fields) {
       sentFields.add(key);
     }
@@ -114,7 +131,7 @@ exports.ControllerClient = class ControllerClient {
 
   resetSelfDrivingMode(contrKey, newMode) {
     const sentInitial = this.controllerModes.has(contrKey);
-    const removedFields = Array.from(this.controllerFields.get(contrKey) || []);
+    const removedFields = Array.from(this.selfDrivingFields.get(contrKey) || []);
     const extraAttrs = {};
     if (sentInitial && removedFields.length > 0) {
       extraAttrs.removed = removedFields;
@@ -126,7 +143,7 @@ exports.ControllerClient = class ControllerClient {
         Mode: newMode,
       }});
 
-    this.controllerFields.delete(contrKey);
+    this.selfDrivingFields.delete(contrKey);
   }
 
   transmitUpdate(contrKey, msg, payload) {

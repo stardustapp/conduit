@@ -53,6 +53,7 @@ exports.ApiServer = class ApiServer {
 
     // this.knownNodes.set(nodeHandle._id, nodeHandle.instance);
     this.connectedNodes.set(client, nodeHandle);
+    return nodeHandle._id;
   }
 
   async syncActualState(recordManager, controllerManager, client, stateKey, actualState) {
