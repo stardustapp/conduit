@@ -116,17 +116,19 @@ function createEventStream() {
   subprocess.stdout.unref();
   subprocess.stderr.unref();
 
-  subprocess.then(out => {
-    // TODO: detect it not being supported at all
-    // if (out.exitCode !== 0) throw new Error(
-    //   `"podman events" exited with code ${out.exitCode}`);
-    console.warn(`WARN: "podman events" exited with code ${out.exitCode}, assuming it's broken`);
+  subprocess
+    .catch(err => err)
+    .then(out => {
+      // TODO: detect it not being supported at all
+      // if (out.exitCode !== 0) throw new Error(
+      //   `"podman events" exited with code ${out.exitCode}`);
+      console.warn(`WARN: "podman events" exited with code ${out.exitCode}, assuming it's broken`);
 
-    // send dummy messages regularly instead
-    setInterval(() => {
-      emitter.emit('heartbeat')
-    }, 2 * 60 * 1000);
-  });
+      // send dummy messages regularly instead
+      setInterval(() => {
+        emitter.emit('heartbeat')
+      }, 2 * 60 * 1000);
+    });
 
   const emitter = new EventEmitter();
   subprocess.stdout.on('data', function (chunk) {
