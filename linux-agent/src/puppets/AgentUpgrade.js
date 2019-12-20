@@ -3,13 +3,18 @@ const semver = require('semver');
 const myVersion = require('../../package.json').version;
 const {runAction} = require('../commands/_actions.js');
 const dpkgQueryCmd = require('../commands/dpkg-query.js');
+const rpmCmd = require('../commands/rpm.js');
 const whichCmd = require('../commands/which.js');
 
 const hasDnfPromise = whichCmd.isPresent('dnf');
 
 module.exports = class AgentUpgradePuppet extends require('./_base.js') {
   async canSelfDrive() {
-    return await dpkgQueryCmd.isPkgInstalledOk('conduit-agent');
+    if (await hasDnfPromise) {
+      return !!await rpmCmd.queryInstalledPackage('conduit-agent');
+    } else {
+      return await dpkgQueryCmd.isPkgInstalledOk('conduit-agent');
+    }
   }
 
   onSelfDriving({latestVersion}) {
