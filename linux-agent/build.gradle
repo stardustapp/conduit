@@ -9,19 +9,16 @@ plugins {
   id 'nebula.ospackage' version '7.5.0'
 }
 
-apply plugin: 'nebula.deb'
-
 task 'installNpmDeps'(type:Exec) {
     commandLine 'npm', 'ci'
 }
 
 def jsonFile = file('package.json')
 def packageJson = new groovy.json.JsonSlurper().parseText(jsonFile.text)
+project.version = packageJson.version
 
+apply plugin: 'nebula.deb'
 task packageDeb(type: Deb) {
-  packageName = 'conduit-agent'
-  version = packageJson.version
-
   def buildId = System.getenv('BUILD_ID')
   if (buildId != null) {
     release = buildId
@@ -29,7 +26,7 @@ task packageDeb(type: Deb) {
     release = 1
   }
 
-  postInstall file('dist/deb-postinst.sh')
+  postInstall file('dist/deb-postInstall.sh')
 
   requires('nodejs')
   requires('adduser')
@@ -65,5 +62,58 @@ task packageDeb(type: Deb) {
   link('/etc/sudoers.d/conduit-agent',
       '/opt/conduit-agent/dist/sudoers')
 }
-
 tasks.packageDeb.dependsOn installNpmDeps
+
+apply plugin: 'nebula.rpm'
+task packageRpm(type: Rpm) {
+  def buildId = System.getenv('BUILD_ID')
+  if (buildId != null) {
+    release = buildId
+  }
+  os LINUX
+
+  preInstall file('dist/rpm-preInstall.sh')
+  postInstall file('dist/rpm-postInstall.sh')
+  preUninstall file('dist/rpm-preUninstall.sh')
+  postUninstall file('dist/rpm-postUninstall.sh')
+
+  requires('nodejs')
+  recommends('wireguard')
+  recommends('podman')
+  recommends('systemd')
+
+  into '/opt/conduit-agent'
+  user 'root'
+  permissionGroup 'root'
+
+  from('src') {
+    into 'src'
+  }
+  from('node_modules') {
+    into 'node_modules'
+  }
+  from('package.json') {}
+  from('package-lock.json') {}
+
+  from('dist/unit-files') {
+    createDirectoryEntry true
+    permissionGroup 'conduit'
+    fileMode 0460
+    into 'unit-files'
+  }
+
+  from('dist/conduit-agent.service') {
+    into 'dist'
+    fileMode 0664
+  }
+  link('/usr/lib/systemd/system/conduit-agent.service',
+      '/opt/conduit-agent/dist/conduit-agent.service')
+
+  from('dist/sudoers') {
+    into 'dist'
+    fileMode 0440
+  }
+  link('/etc/sudoers.d/conduit-agent',
+      '/opt/conduit-agent/dist/sudoers')
+}
+tasks.packageRpm.dependsOn installNpmDeps
