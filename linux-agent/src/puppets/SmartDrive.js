@@ -13,7 +13,7 @@ module.exports = class SmartDrivePuppet extends require('./_base.js') {
   }
 
   shouldObserveMode(mode) {
-    return ['Observing', 'SelfDriving'].includes(mode);
+    return ['SelfDriving'].includes(mode);
   }
   onObservingStart() {
     // run now and then also later
