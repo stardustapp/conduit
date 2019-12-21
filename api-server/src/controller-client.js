@@ -51,10 +51,10 @@ exports.ControllerClient = class ControllerClient {
     for (const [contrKey, controller] of this.controllerManager.controllers) {
       const oldMode = this.controllerModes.get(contrKey);
       const newMode
-        = SelfDrivingPaused.includes(contrKey) ? 'Paused'
+        = !SelfDrivingAvailable.includes(contrKey) ? 'Unavailable'
+        : SelfDrivingPaused.includes(contrKey) ? 'Paused'
         : SelfDrivingActive.includes(contrKey) ? 'SelfDriving'
-        : SelfDrivingAvailable.includes(contrKey) ? 'Observing'
-        : 'Unavailable';
+        : 'Observing';
       if (oldMode !== newMode) {
         this.setControllerMode(contrKey, oldMode, newMode);
       }

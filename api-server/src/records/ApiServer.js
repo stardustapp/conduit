@@ -58,7 +58,7 @@ exports.ApiServer = class ApiServer {
 
   async syncActualState(recordManager, controllerManager, client, stateKey, actualState) {
     const nodeHandle = this.connectedNodes.get(client);
-    await controllerManager.syncActualState(nodeHandle, stateKey, actualState);
+    return await controllerManager.syncActualState(nodeHandle, stateKey, actualState);
   }
 
   async publishSelfDriving(controllerManager, client) {

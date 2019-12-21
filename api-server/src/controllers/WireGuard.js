@@ -51,11 +51,26 @@ exports.WireGuard = class WireGuardController {
     }
   }
 
-  async syncActualState(nodeHandle, {identities}) {
+  async syncActualState(nodeHandle, {identities, units, willSelfDrive}) {
     // Look up what we already know
     const knownIdentities = this.recordManager
       .findRecords('WgIdentity', record =>
         record.NodeId === nodeHandle._id);
+
+    // TODO: self-driving instructions
+    const actions = new Array;
+    function considerFieldAction(action, actual, desired, keyList=null) {
+      const fields = {};
+      for (const key of keyList || Object.keys(desired)) {
+        const act = actual[key], des = desired[key];
+        if (act !== des) {
+          fields[key] = des;
+        }
+      }
+      if (Object.keys(fields).length > 0) {
+        actions.push({...action, fields});
+      }
+    }
 
     const knownDevs = new Map;
     const extraIdents = new Set();
@@ -71,26 +86,58 @@ exports.WireGuard = class WireGuardController {
 
     for (const iface of identities) {
       const {PublicKey, DeviceName, ListenPort, Peers} = iface;
-      console.log('Node', nodeHandle, 'sent WG pubkey', PublicKey);
-
+      // console.log('Node', nodeHandle, 'sent WG pubkey', PublicKey);
       let identity = knownDevs.get(DeviceName);
-      if (identity && identity.latestData.PublicKey == PublicKey) {
-        await identity.commitFields({ListenPort});
+
+      const unit = units.find(u => u.DeviceName === DeviceName) || {};
+      const dynamicFields = {
+        ListenPort,
+        UnitStatus: unit.Status,
+        UnitEnabled: unit.Enabled,
+      };
+
+      // Change behavior based on which direction state should flow
+      if (willSelfDrive) {
+        if (!identity) {
+          actions.push({type: 'delete device', DeviceName});
+        } else if (identity.latestData.PublicKey === '(new)') {
+          // allow for the agent to locally generate new keys
+          // no immediate action. next sync can handle fix-ups normally
+          identity = await this.upsertLocalWgIdentity({
+            NodeId: nodeHandle._id,
+            PublicKey, DeviceName,
+            ...dynamicFields,
+          });
+        } else {
+          considerFieldAction({type: 'configure systemd', DeviceName},
+            identity.latestData, dynamicFields, ['UnitStatus', 'UnitEnabled']);
+          considerFieldAction({type: 'configure device', DeviceName},
+            identity.latestData, iface, ['PublicKey', 'ListenPort']);
+        }
+
       } else {
-        identity = await this.upsertLocalWgIdentity({
-          NodeId: nodeHandle._id,
-          PublicKey, DeviceName, ListenPort,
-        });
-        console.log('Node', nodeHandle, 'created WG identity', identity, 'for', DeviceName);
+        if (identity && identity.latestData.PublicKey == PublicKey) {
+          await identity.commitFields(dynamicFields);
+        } else {
+          identity = await this.upsertLocalWgIdentity({
+            NodeId: nodeHandle._id,
+            PublicKey, DeviceName,
+            ...dynamicFields,
+          });
+          console.log('Node', nodeHandle, 'created WG identity', identity, 'for', DeviceName);
+        }
+
       }
       extraIdents.delete(identity);
 
       // Sync peers
-      await this.syncIfacePeers(nodeHandle, identity, Peers);
+      identity && await this.syncIfacePeers(nodeHandle, identity, Peers);
     }
 
     for (const goneIdent of extraIdents) {
-      if (goneIdent.latestData.PublicKey) {
+
+      // condition TODO
+      if (goneIdent.latestData.PublicKey && goneIdent.latestData.PublicKey !== '(none)' && goneIdent.latestData.PublicKey !== '(new)') {
         // Unlink keyed interfaces since the key material might still be relevant
         await goneIdent.commitFields({
           NodeId: null,
@@ -103,6 +150,8 @@ exports.WireGuard = class WireGuardController {
     }
 
     console.log('Completed WireGuard actual sync');
+    if (willSelfDrive) console.log('Sending WireGuard selfdriving actions:', actions);
+    return {actions};
   }
 
   async syncIfacePeers(nodeHandle, identityHandle, peerList) {

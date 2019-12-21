@@ -1,5 +1,5 @@
 const execa = require('execa');
-const {readWholeStream} = require('./_lib.js');
+const {readWholeStream, readTextTable} = require('./_lib.js');
 
 exports.test = async function() {
   const subprocess = execa(`smartctl`, [`--version`], {
@@ -85,36 +85,6 @@ exports.readAllForDevice = async function(path) {
   }
   return report;
 };
-
-function readTextTable(lines) {
-  if (lines.length < 1) return [];
-
-  // record column positioning for each header field
-  const fields = [];
-  lines.shift()
-    .match(/ *[^ ]+ */g) // capture including whitespace
-    .reduce((accum, raw) => {
-      fields.push({
-        text: raw.trim(),
-        start: accum,
-        end: accum+raw.length-1,
-      });
-      // accumulate starting index
-      return accum+raw.length;
-    }, 0);
-
-  // last field reads until the last column of the data row
-  fields.slice(-1)[0].end = undefined;
-
-  // slice each field out of the lines
-  return lines.map(line => {
-    const row = {};
-    for (const {text, start, end} of fields) {
-      row[text] = line.slice(start, end).trim();
-    }
-    return row;
-  });
-}
 
 exports.dumpAll = async function() {
   const devices = await this

@@ -28,7 +28,7 @@ class PuppetBase {
 
     const wasObserving = this.shouldObserveMode(this.currentMode);
     if (this.shouldObserveMode(newMode)) {
-      if (!wasObserving) this.onObservingStart(params);
+      if (!wasObserving) this.onObservingStart(newMode);
     } else if (wasObserving) {
       this.onObservingStop(newMode);
     }
@@ -49,16 +49,16 @@ class PuppetBase {
   shouldObserveMode(mode) {
     return mode === 'Observing';
   }
-  onObservingStart() {
-    TODO(`${this.constructor.name} onObservingStart`);
+  onObservingStart(newMode) {
+    TODO(`${this.constructor.name} onObservingStart`, newMode);
   }
   onObservingStop(newMode) {
     TODO(`${this.constructor.name} onObservingStop`, newMode);
   }
 
-  trySubmitObservations() {
+  trySubmitObservations(...args) {
     return this
-      .submitObservations()
+      .submitObservations(...args)
       .catch(err => {
         console.log(`${this.constructor.name} failed to submitObservations:`, err);
         return err;

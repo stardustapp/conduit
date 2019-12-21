@@ -1,8 +1,8 @@
-const {execForLine} = require('./_lib.js');
+const {execForBuffer} = require('./_lib.js');
 
 exports.test = async function() {
   try {
-    await execForLine(`sudo wg help`);
+    await execForBuffer(`sudo wg help`);
     return true;
   } catch (err) {
     console.log(`can't use wireguard-tools:`, err);
@@ -11,12 +11,12 @@ exports.test = async function() {
 }
 
 exports.dumpAll = async function() {
-  const wgRaw = await execForLine(`sudo wg show all dump`);
+  const wgRaw = await execForBuffer(`sudo wg show all dump`, 'stdout', 'utf-8');
   if (!wgRaw) return [];
 
   const identityMap = {};
   const identityList = [];
-  for (const line of wgRaw.split('\n')) {
+  for (const line of wgRaw.trim().split('\n')) {
     const parts = line.split('\t');
 
     if (!(parts[0] in identityMap)) {
@@ -27,8 +27,7 @@ exports.dumpAll = async function() {
       ] = parts;
 
       identityMap[DeviceName] = {
-        DeviceName,
-        PublicKey: PublicKey === '(none)' ? null : PublicKey,
+        DeviceName, PublicKey,
         ListenPort: parseInt(ListenPort),
         FwMark: FwMark === 'off' ? null : FwMark,
         Peers: [], // to be filled
@@ -37,8 +36,9 @@ exports.dumpAll = async function() {
 
     } else {
       // extra iface lines are each a remote peer
-      const [ DeviceName,
-        PublicKey, PreSharedKey, Endpoint, AllowedIPs,
+      const [
+        DeviceName, PublicKey,
+        PreSharedKey, Endpoint, AllowedIPs,
         LatestHandshake, TransferRx, TransferTx, PersistentKeepalive,
       ] = parts;
       // TODO: grab InternetEndpoint from config file, in case it's a DNS name

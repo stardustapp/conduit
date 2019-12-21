@@ -1,4 +1,5 @@
 const podmanCmd = require('../commands/podman.js');
+const systemctlCmd = require('../commands/systemctl.js');
 const REPORTING_CONFIGS = true; // TODO
 
 module.exports = class PodManPuppet extends require('./_base.js') {
