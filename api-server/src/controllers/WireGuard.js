@@ -104,8 +104,8 @@ exports.WireGuard = class WireGuardController {
       // console.log('Node', nodeHandle, 'sent WG pubkey', PublicKey);
       let identity = knownDevs.get(DeviceName);
 
-      const unit = units.find(u => u.DeviceName === DeviceName) || {};
-      const config = configs.find(c => c.Interface === DeviceName) || {};
+      const unit = (units||[]).find(u => u.DeviceName === DeviceName) || {};
+      const config = (configs||[]).find(c => c.Interface === DeviceName) || {};
       const dynamicFields = {
         ListenPort, FwMark,
         UnitStatus: unit.State,
