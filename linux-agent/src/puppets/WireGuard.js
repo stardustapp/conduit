@@ -1,4 +1,5 @@
 const wgCmd = require('../commands/wg.js');
+const etcWireguard = require('../files/etc.wireguard.js')
 const systemctlCmd = require('../commands/systemctl.js');
 
 async function listSystemUnits() {
@@ -37,6 +38,7 @@ module.exports = class WireGuardPuppet extends require('./_base.js') {
     // gather data
     const result = await this
       .syncActual({
+        configs: await etcWireguard.dumpAllBasics(),
         units: await listSystemUnits(),
         identities: await wgCmd.dumpAll(),
         willSelfDrive: puppetMode === 'SelfDriving',
@@ -60,6 +62,9 @@ module.exports = class WireGuardPuppet extends require('./_base.js') {
     }
 
     return super.onModeChanged(newMode, params);
+  }
+  onSelfDrivingUpdate() {
+    this.trySubmitObservations();
   }
 
   // schedule regular observations while active

@@ -4,6 +4,20 @@ exports.WireGuard = class WireGuardController {
     this.metrics = metrics;
   }
 
+  // "Self-drive" by just telling the box when things change
+  // Actual changes are done through the node->api sync
+  publishSelfDriving(nodeHandle, subscriber) {
+    const identCursor = this.recordManager
+      .findRecordsRaw('WgIdentity', record =>
+        record.NodeId === nodeHandle._id)
+      .reactive();
+
+    subscriber.informFields({nonce: Math.random()});
+    return identCursor.onChange(() => {
+      subscriber.informFields({nonce: Math.random()});
+    });
+  }
+
   async upsertLocalWgIdentity({PublicKey, NodeId, DeviceName, ListenPort}) {
     if (!DeviceName) throw new Error(
       `Local WgIdentity objects must be addressed using DeviceName`);
@@ -52,7 +66,7 @@ exports.WireGuard = class WireGuardController {
     }
   }
 
-  async syncActualState(nodeHandle, {identities, units, willSelfDrive}) {
+  async syncActualState(nodeHandle, {configs, identities, units, willSelfDrive}) {
     // Look up what we already know
     const knownIdentities = this.recordManager
       .findRecords('WgIdentity', record =>
@@ -86,16 +100,20 @@ exports.WireGuard = class WireGuardController {
     }
 
     for (const iface of identities) {
-      const {PublicKey, DeviceName, ListenPort, Peers} = iface;
+      const {PublicKey, DeviceName, ListenPort, FwMark, Peers} = iface;
       // console.log('Node', nodeHandle, 'sent WG pubkey', PublicKey);
       let identity = knownDevs.get(DeviceName);
 
       const unit = units.find(u => u.DeviceName === DeviceName) || {};
+      const config = configs.find(c => c.Interface === DeviceName) || {};
       const dynamicFields = {
-        ListenPort,
-        UnitStatus: unit.Status,
+        ListenPort, FwMark,
+        UnitStatus: unit.State,
         UnitEnabled: unit.Enabled,
+        SelfAddresses: config.Addresses,
+        SelfDns: config.DnsServers,
       };
+      // console.log(iface, unit, config);
 
       // Change behavior based on which direction state should flow
       if (willSelfDrive) {
@@ -136,14 +154,21 @@ exports.WireGuard = class WireGuardController {
     }
 
     for (const goneIdent of extraIdents) {
+      const {PublicKey, DeviceName, ListenPort} = goneIdent.latestData;
+
+      if (willSelfDrive) {
+        actions.push({type: 'create device', DeviceName, PublicKey, ListenPort});
+        considerFieldAction({type: 'configure systemd', DeviceName},
+          goneIdent.latestData, {}, ['UnitStatus', 'UnitEnabled']);
 
       // condition TODO
-      if (goneIdent.latestData.PublicKey && goneIdent.latestData.PublicKey !== '(none)' && goneIdent.latestData.PublicKey !== '(new)') {
+      } else if (PublicKey && PublicKey !== '(none)' && PublicKey !== '(new)') {
         // Unlink keyed interfaces since the key material might still be relevant
         await goneIdent.commitFields({
           NodeId: null,
           DeviceName: null,
         });
+
       } else {
         // Delete unkeyed interfaces, they're anonymous
         await goneIdent.hardDelete();
