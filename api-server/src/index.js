@@ -12,6 +12,13 @@ const {RecordManager} = require('./dustbox/record-manager.js');
 const {ControllerManager} = require('./controller-manager.js');
 const {DDPServer} = require('./ddp-server.js');
 
+// TODO: dummy by default, enable with ENV
+const {MetricsSubmission} = require('./metrics-gcloud.js');
+const metrics = new MetricsSubmission({
+  location: 'us-central1',
+  namespace: 'conduit',
+});
+
 (async () => {
 
   // establish websocket
@@ -67,7 +74,7 @@ const {DDPServer} = require('./ddp-server.js');
   // const meshController = new MeshController(recordManager);
 
   // Load and set up self-driving controllers
-  const controllerManager = new ControllerManager(dustClient, recordManager, {
+  const controllerManager = new ControllerManager(dustClient, recordManager, metrics, {
     AgentUpgrade: require('./controllers/AgentUpgrade.js').AgentUpgrade,
     ContainerNetwork: require('./controllers/ContainerNetwork.js').ContainerNetwork,
     NetDevice: require('./controllers/NetDevice.js').NetDevice,

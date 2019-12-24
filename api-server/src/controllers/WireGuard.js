@@ -1,6 +1,7 @@
 exports.WireGuard = class WireGuardController {
-  constructor(recordManager) {
+  constructor(recordManager, metrics) {
     this.recordManager = recordManager;
+    this.metrics = metrics;
   }
 
   async upsertLocalWgIdentity({PublicKey, NodeId, DeviceName, ListenPort}) {
@@ -162,6 +163,14 @@ exports.WireGuard = class WireGuardController {
       .findRecords('WgTunnel', record =>
         record.WgIdentityIds.includes(identityHandle._id));
 
+    const ifaceMetrics = this.metrics.withNodeTimeSlot({
+      nodeId: nodeHandle._id,
+      startTime: identityHandle.latestData.createdAt, // TODO: last reset date
+      endTime: new Date(),
+      fixedLabels: {
+        local_key: identityHandle.latestData.PublicKey,
+      }});
+
     for (const peer of peerList) {
       // TODO: use cached publickey list
       const remoteIdentity = await this.ensureRemoteWgIdentity({
@@ -204,6 +213,35 @@ exports.WireGuard = class WireGuardController {
             ? (peer.TransferTx - TransferTx) : null,
           ...peeringFields,
         });
+
+        // submit Transfer deltas to e.g. gcloud
+        const labels = {
+          peer_key: remoteIdentity.latestData.PublicKey,
+        };
+        ifaceMetrics.pushMetricPoint({
+          type: 'custom.googleapis.com/wireguard/bytes_sent',
+          metricKind: 'CUMULATIVE',
+          labels,
+          valueType: 'INT64',
+          value: TransferTx,
+        });
+        ifaceMetrics.pushMetricPoint({
+          type: 'custom.googleapis.com/wireguard/bytes_received',
+          metricKind: 'CUMULATIVE',
+          labels,
+          valueType: 'INT64',
+          value: TransferRx,
+        });
+        if (peer.LatestHandshake) {
+          ifaceMetrics.pushMetricPoint({
+            type: 'custom.googleapis.com/wireguard/handshake_age_mins',
+            metricKind: 'GAUGE',
+            labels,
+            valueType: 'INT64',
+            value: (new Date() - peer.LatestHandshake) / 1000 / 60,
+          });
+        }
+
       } else {
         peering = await this.recordManager.commitNew('WgPeering', {
           LocalIdentityId: identityHandle._id,

@@ -1,14 +1,15 @@
 const {ControllerClient} = require('./controller-client.js');
 
 exports.ControllerManager = class ControllerManager {
-  constructor(dustClient, recordManager, controllerImpls={}) {
+  constructor(dustClient, recordManager, metrics, controllerImpls={}) {
     this.dustClient = dustClient;
     this.recordManager = recordManager;
+    this.metrics = metrics;
     // this.controllerImpls = controllerImpls;
 
     this.controllers = new Map;
     for (const contrKey in controllerImpls) {
-      const instance = new controllerImpls[contrKey](recordManager);
+      const instance = new controllerImpls[contrKey](recordManager, metrics);
       this.controllers.set(contrKey, instance);
     }
 
