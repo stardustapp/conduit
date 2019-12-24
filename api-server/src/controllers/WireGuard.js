@@ -258,13 +258,16 @@ exports.WireGuard = class WireGuardController {
           value: TransferRx,
         });
         if (peer.LatestHandshake) {
-          ifaceMetrics.pushMetricPoint({
-            type: 'custom.googleapis.com/wireguard/handshake_age_mins',
-            metricKind: 'GAUGE',
-            labels,
-            valueType: 'INT64',
-            value: (new Date() - peer.LatestHandshake) / 1000 / 60,
-          });
+          const ageInMins = (new Date() - peer.LatestHandshake) / 1000 / 60;
+          if (ageInMins < 30) {
+            ifaceMetrics.pushMetricPoint({
+              type: 'custom.googleapis.com/wireguard/handshake_age_mins',
+              metricKind: 'GAUGE',
+              labels,
+              valueType: 'INT64',
+              value: ageInMins,
+            });
+          }
         }
 
       } else {
