@@ -27,7 +27,21 @@ exports.ApiServer = class ApiServer {
       if (LastSeen >= cutOffDate) continue;
 
       console.log('Culling zombie', apiServer);
-      TODO(`Unlink zombied nodes before hardDelete()ing the zombie ApiServer itself`);
+      // look for nodes that were still connected to the zombie
+      for (const nodeHandle of recordManager.findRecords('Node')) {
+        if (nodeHandle.latestData.ApiServerId !== apiServer._id) continue;
+
+        // try marking each node, but don't wait for it
+        console.log('Marking node', nodeHandle, 'as offline (zombied)');
+        nodeHandle.commitFields({
+          ApiServerId: null,
+          OnlineToken: null,
+          OnlineSince: null,
+        }).catch(err => {
+          console.log('WARN: Failed to mark node', nodeHandle, 'offline.', err.message);
+        })
+      }
+
       await apiServer.hardDelete(version);
     }
   }
@@ -65,10 +79,23 @@ exports.ApiServer = class ApiServer {
     const nodeHandle = this.connectedNodes.get(client);
     await controllerManager.publishSelfDriving(nodeHandle, client);
 
+    const onlineToken = client.sessionId.toString();
     await nodeHandle.commitFields({
       ApiServerId: this.self._id,
-      OnlineToken: client.sessionId.toString(),
+      OnlineToken: onlineToken,
       OnlineSince: new Date(),
+    });
+
+    client.addCloser(async () => {
+      // check if we're still the 'live' connection
+      if (nodeHandle.latestData.OnlineToken === onlineToken) {
+        console.log('Marking node', nodeHandle, 'as offline (closed)');
+        await nodeHandle.commitFields({
+          ApiServerId: null,
+          OnlineToken: null,
+          OnlineSince: null,
+        });
+      }
     });
   }
 }
