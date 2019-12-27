@@ -65,6 +65,24 @@ exports.RecordManager = class RecordManager {
         new RecordHandle(this, this.getClassType(type), id));
   }
 
+  observeRecords(typeName, handlerCbs, selector=()=>true) {
+    const cursor = this
+      .findRecordsRaw(typeName, selector)
+      .reactive();
+
+    const handles = new Map; // id => handle
+    for (const {type, id} of cursor.data()) {
+      const handle = new RecordHandle(this, this.getClassType(type), id);
+      handles.set(id, type);
+      handlerCbs.onAdded(id, handle);
+    }
+    handlerCbs.onReady(handles);
+
+    return cursor.onChange((...args) => {
+      TODO(typeName, 'change:', args);
+    });
+  }
+
   async commitMutation(recordId, mutatorCb, maxTries=3) {
     let triesLeft = maxTries;
 

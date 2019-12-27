@@ -40,6 +40,8 @@ const metrics = new MetricsSubmission({
     Allocation: require('./records/Allocation.js').Allocation,
     ApiServer: require('./records/ApiServer.js').ApiServer,
     LinuxNode: require('./records/LinuxNode.js').LinuxNode,
+    WgIdentity: require('./records/WgIdentity.js').WgIdentity,
+    WgPeering: require('./records/WgPeering.js').WgPeering,
   });
 
   // download all data records (TODO: limit in scope)

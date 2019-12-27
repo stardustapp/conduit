@@ -1,21 +1,85 @@
+const debounce = require('debounce');
+
+class WireGuardSelfDrivingNode {
+  constructor(nodeHandle, subscriber, {identitiesCursor, getPeeringsCursor}) {
+    this.nodeHandle = nodeHandle;
+    this.subscriber = subscriber;
+
+    this.identitiesCursor = identitiesCursor;
+    // this.getPeeringsCursor = getPeeringsCursor;
+
+    // this.latestObservation = null; // snapshot of latest client submission
+    this.deviceIdentites = new Map; // DeviceName string => WgIdentity instance
+  }
+
+  stop() {
+    TODO(`stop WireGuardSelfDrivingNode`)
+  }
+}
+
 exports.WireGuard = class WireGuardController {
   constructor(recordManager, metrics) {
     this.recordManager = recordManager;
     this.metrics = metrics;
+
+    this.allIdentities = new Array; // WgIdentity handles
+    this.knownPublicKeys = new Map; // PublicKey string => WgIdentity instance
+    this.runningNodes = new Array; // WireGuardSelfDrivingNode instances
+
+    this.markMeshDirty = debounce(() => this.calculateMesh(), 1000);
+
+    // this.identityNodes = new Map; // identityId => WireGuardSelfDrivingNode
+    // this.latestObservations = new Map; // nodeId => {configs, units, devices}
+
+    let isReady = false;
+    const identityObserver = this.recordManager.observeRecords('WgIdentity', {
+      onAdded: (identityId, handle) => {
+        this.allIdentities.push(handle.instance);
+
+        const {PublicKey} = handle.latestData;
+        if (PublicKey && !PublicKey.startsWith('(')) {
+          this.knownPublicKeys.set(PublicKey, handle.instance);
+        }
+
+        if (isReady) this.markMeshDirty();
+      },
+      onReady: (identityMap) => {
+        isReady = true;
+        this.markMeshDirty();
+      },
+    });
+  }
+
+  calculateMesh() {
+
+    TODO(`Calculate WireGuard mesh`);
+    for (const identity of this.allIdentities) {
+      identity.link(this);
+    }
   }
 
   // "Self-drive" by just telling the box when things change
   // Actual changes are done through the node->api sync
   publishSelfDriving(nodeHandle, subscriber) {
-    const identCursor = this.recordManager
-      .findRecordsRaw('WgIdentity', record =>
-        record.NodeId === nodeHandle._id)
-      .reactive();
-
-    subscriber.informFields({nonce: Math.random()});
-    return identCursor.onChange(() => {
-      subscriber.informFields({nonce: Math.random()});
+    return new WireGuardSelfDrivingNode(nodeHandle, subscriber, {
+      identitiesCursor: this.getIdentitiesCursor(nodeHandle._id),
+      getPeeringsCursor: this.getPeeringsCursor.bind(this),
     });
+
+    // subscriber.informFields({nonce: Math.random()});
+    // return identCursor.onChange(() => {
+    //   subscriber.informFields({nonce: Math.random()});
+    // });
+  }
+  getIdentitiesCursor(nodeId) {
+    return this.recordManager
+      .findRecordsRaw('WgIdentity', record =>
+        record.NodeId === nodeHandle._id);
+  }
+  getPeeringsCursor(identityId) {
+    return this.recordManager
+      .findRecordsRaw('WgPeering', record =>
+        record.NodeId === nodeHandle._id);
   }
 
   async upsertLocalWgIdentity({PublicKey, NodeId, DeviceName, ListenPort}) {
@@ -128,10 +192,12 @@ exports.WireGuard = class WireGuardController {
             ...dynamicFields,
           });
         } else {
+          // TODO: when to send config file?
+          // const configFile = await this.recordManager.dustClient.callServerMethod('RenderWgConfig', goneIdent._id);
+          considerFieldAction({type: 'configure device', DeviceName, IdentityId: identity._id},
+            identity.latestData, iface, ['PublicKey', 'ListenPort']);
           considerFieldAction({type: 'configure systemd', DeviceName},
             identity.latestData, dynamicFields, ['UnitStatus', 'UnitEnabled']);
-          considerFieldAction({type: 'configure device', DeviceName},
-            identity.latestData, iface, ['PublicKey', 'ListenPort']);
         }
 
       } else {
@@ -157,7 +223,8 @@ exports.WireGuard = class WireGuardController {
       const {PublicKey, DeviceName, ListenPort} = goneIdent.latestData;
 
       if (willSelfDrive) {
-        actions.push({type: 'create device', DeviceName, PublicKey, ListenPort});
+        const configFile = await this.recordManager.dustClient.callServerMethod('RenderWgConfig', goneIdent._id);
+        actions.push({type: 'create device', DeviceName, PublicKey, configFile});
         considerFieldAction({type: 'configure systemd', DeviceName},
           goneIdent.latestData, {}, ['UnitStatus', 'UnitEnabled']);
 
