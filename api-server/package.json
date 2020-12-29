@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google-cloud/monitoring": "^1.6.1",
+    "@google-cloud/monitoring": "^2.1.4",
     "debounce": "^1.2.0",
     "ejson": "^2.2.0",
     "faye-websocket": "^0.11.3",
